@@ -1,0 +1,107 @@
+#!/bin/bash
+
+#query,retrieve,and tgz CFMM's dicom data from sharcnet.
+
+# In order to run this script as a cron task:
+#   1.save your uwo username and password to ~/.uwo_crendential:
+#     <username>
+#     <password>
+#     chmod 600 ~/.uwo_credentials 
+#   2.setup passwordless ssh login to graham.sharnet.ca 
+
+#Author: YingLi Lu
+#e-mail: yinglilu@gmail.com
+#date: 2017-11-21
+
+#for test:
+#  StudyDate='20171108' #This study date has three patients, each has one study
+#  StudyDate='20170529' #smaller data
+
+
+function usage { 
+
+  echo "Retrieves studies from dicom server based on Principal^Project, Date and/or PatientName.  If no search strings provided, all studies are downloaded"
+  echo "Uses credentials in ~/.uwo_credentials (line1: username, line2: password)  or prompts for username/password" 
+  echo ""
+  echo "Usage: `basename $0` <search options>  <output folder> "
+  echo "    Search Options:  "
+  echo "	-n 'PatientName'"
+  echo "	-p 'Principal^Project'"
+  echo "	-d 'Date'"
+  echo ""
+  echo "	Example (all scans on specific date): `basename $0` -d '20170530' myfolder"
+  echo "	Example (all scans since date): `basename $0` -d '20170530-' myfolder"
+  echo "	Example (all scans in date range): `basename $0` -d '20170530-20170827' myfolder"
+  echo "	Example (specific Principal^Project on all dates): `basename $0` -p 'Khan^NeuroAnalytics'  myfolder"
+  echo "	Example (specific PatientName searc): `basename $0` -n '*subj01*'  myfolder"
+
+
+}
+
+execpath=`dirname $0`
+execpath=`realpath $execpath`
+
+
+# new usage to be:
+# -d (YYYYMMDD - default '-')
+# -n (PatientName - default '*')
+# -p (Principal^Project - default '*')
+DATE_SEARCH=\'-\'
+STUDY_SEARCH=\'*\'
+NAME_SEARCH=\'*\'
+
+DOWNLOADED_UID_LIST=
+UWO_CREDNTIALS=~/.uwo_credentials
+
+while getopts "d:n:p:Ac:" options; do
+ case $options in
+    d ) DATE_SEARCH=\'$OPTARG\';;
+    n ) NAME_SEARCH=\'$OPTARG\';;
+    p ) STUDY_SEARCH=\'$OPTARG\';;
+    U ) DOWNLOADED_UID_LIST=$OPTARG;;
+    c ) UWO_CREDNTIALS=$OPTARG;;
+    * ) usage
+	exit 1;;
+ esac
+done
+
+shift $((OPTIND-1))
+
+if [ "$#" -lt 1 ]
+then
+	usage
+	exit 1
+fi
+
+
+OUTPUT_DIR=$1
+
+shift 1 
+
+if [ ! -e $UWO_CREDNTIALS ]
+then
+read -p "UWO Username: " UWO_USERNAME
+read -srp "UWO Password: " UWO_PASSWORD
+else
+UWO_USERNAME=$(sed -n '1 p' ${UWO_CREDNTIALS})
+UWO_PASSWORD=$(sed -n '2 p' ${UWO_CREDNTIALS})
+fi
+
+KEEP_SORTED_DICOM='False'
+CONNECT='CFMM-Public@dicom.cfmm.robarts.ca:11112'
+
+DICOMS_DIR=$OUTPUT_DIR/dicoms
+mkdir -p $OUTPUT_DIR $DICOMS_DIR
+
+#singularity image defined in CONFIG_DCM_RETRIEVE file
+((python $execpath/retrieve_cfmm_tgz.py \
+${UWO_USERNAME} \
+${UWO_PASSWORD} \
+${CONNECT} \
+${STUDY_SEARCH} \
+${DICOMS_DIR} \
+${KEEP_SORTED_DICOM} \
+${OUTPUT_DIR} \
+${DATE_SEARCH} \
+${NAME_SEARCH} \
+${DOWNLOADED_UID_LIST}  3>&1 1>&2 2>&3 | grep -E -v "^Picked up _JAVA_OPTIONS:|^tar: Removing leading")  3>&1 2>&1  )
