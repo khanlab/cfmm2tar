@@ -53,7 +53,7 @@ NAME_SEARCH=\'*\'
 DOWNLOADED_UID_LIST=
 UWO_CREDNTIALS=~/.uwo_credentials
 
-while getopts "d:n:p:Ac:" options; do
+while getopts "d:n:p:U:c:" options; do
  case $options in
     d ) DATE_SEARCH=\'$OPTARG\';;
     n ) NAME_SEARCH=\'$OPTARG\';;
