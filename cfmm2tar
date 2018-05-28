@@ -9,8 +9,8 @@
 #     chmod 600 ~/.uwo_credentials 
 #   2.setup passwordless ssh login to graham.sharnet.ca 
 
-#Author: YingLi Lu
-#e-mail: yinglilu@gmail.com
+#Author: Ali Khan, YingLi Lu
+#e-mail: 
 #date: 2017-11-21
 
 #for test:
@@ -94,7 +94,7 @@ DICOMS_DIR=$OUTPUT_DIR/dicoms
 mkdir -p $OUTPUT_DIR $DICOMS_DIR
 
 #singularity image defined in CONFIG_DCM_RETRIEVE file
-((python $execpath/retrieve_cfmm_tgz.py \
+python $execpath/retrieve_cfmm_tar.py \
 ${UWO_USERNAME} \
 ${UWO_PASSWORD} \
 ${CONNECT} \
@@ -104,4 +104,4 @@ ${KEEP_SORTED_DICOM} \
 ${OUTPUT_DIR} \
 ${DATE_SEARCH} \
 ${NAME_SEARCH} \
-${DOWNLOADED_UID_LIST}  3>&1 1>&2 2>&3 | grep -E -v "^Picked up _JAVA_OPTIONS:|^tar: Removing leading")  3>&1 2>&1  )
+${DOWNLOADED_UID_LIST}
