@@ -61,7 +61,7 @@ build:
  	#cd ../; sudo ${SINGULARITY} build --force ${SINGULARITY_IMAGE} ${SINGULARITY_FILE}; cd -
 
 test_singularity_cfmm2tar_cmrr:
-	sudo ${SINGULARITY} run -B /mnt:/mnt -B /home:/home -B /tmp:/tmp ${SINGULARITY_IMAGE} -n '2017_11_30_MS12' ${TGZ_DEST_DIR}
+	${SINGULARITY} run -B /mnt:/mnt -B /home:/home -B /tmp:/tmp ${SINGULARITY_IMAGE} -n '2017_11_30_MS12' ${TGZ_DEST_DIR}
 
 # #test
 # python retrieve_cfmm_tgz.py 'ylu589' '801199Rs,' 'CFMM-Public@dicom.cfmm.robarts.ca:11112' 'Khan*' /home/ylu/test/retreve True /home/ylu/test/tgz  '20171116' '*' 
