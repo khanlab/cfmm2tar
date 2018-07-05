@@ -18,8 +18,8 @@ PATIENT_NAME='*'
 LIST_DOWNLOADED_UIDS=/mnt/hgfs/projects/cfmm2tar/src/test/downloaded_uids.txt
 
 # MATCHING_KEY="-m StudyDescription='Khan*' -m StudyDate='20171116'"
-## DCM4CHE_PATH='docker run -v /home:/home --rm yinglilu/dcm4che:0.3'
-DCM4CHE_PATH=''
+DCM4CHE_PATH='docker run -v /home:/home --rm yinglilu/dcm4che:0.3'
+#DCM4CHE_PATH=''
 
 SINGULARITY=~/apps/singularity/bin/singularity
 SINGULARITY_IMAGE=~/singularities/cfmm2tar.simg
@@ -41,6 +41,15 @@ test_cmrr:
 	#PATIENT_NAME=2017_11_30_MS12
 	python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} '*' ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  '*' '2017_11_30_MS12' ${LIST_DOWNLOADED_UIDS}
 
+# test data: tissue 9.4T missing ProtocolName and SeriesDescption tag,wich causing error when run tar2bids(heudiconv)
+# PI: Khan
+# project: DiffModeling
+# date: 20180626
+# studyinstanceuid:2.16.756.5.5.100.8323328.90914.1530020752.11
+test_cmrr2tar_insert_tag:
+		python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} '*' ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  '*' '20180626' ${LIST_DOWNLOADED_UIDS}
+
+
 ######
 # test cfmm2tar
 ######
@@ -52,6 +61,8 @@ test_cfmm2tar_big:
 
 test_cfmm2tar_cmrr:
 	../cfmm2tar -n '2017_11_30_MS12' ${TGZ_DEST_DIR}
+
+
 
 ######
 # test singularity

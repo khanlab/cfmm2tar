@@ -17,12 +17,44 @@ import sys
 import logging
 import shutil
 
+import pydicom
+
 import DicomSorter
 import sort_rules
 import Dcm4cheUtils
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s-%(levelname)s-%(message)s', datefmt='%Y/%m/%d %I:%M:%S')
+
+
+def insert_tag(dicom_dir):
+    '''
+    walk dicom files in dicom_dir, and insert tags if missing
+    '''
+
+    logger = logging.getLogger(__name__)
+
+    for root, dirs, filenames in os.walk(dicom_dir):
+        for filename in filenames:
+            full_filename = os.path.join(root, filename)
+            try:
+                ds = pydicom.read_file(full_filename, stop_before_pixels=True)
+
+                if "ProtocolName" not in ds:
+
+                    ds.add_new((0x0018, 0x1030), 'LO', 'unnamed')
+                    ds.save_as(full_filename)
+                    logger.info(
+                        "Inserted ProtocolName 'unnamed' to {}".format(full_filename))
+
+                if "SeriesDescription" not in ds:
+                    ds.add_new((0x0008, 0x103e), 'LO', 'unnamed')
+                    ds.save_as(full_filename)
+                    logger.info(
+                        "inserted SeriesDescription 'unnamed' to {}".format(full_filename))
+
+            except Exception as e:
+                logger.exception(e)
 
 
 def main(uwo_username,
@@ -53,8 +85,13 @@ def main(uwo_username,
     [retrieved_dicom_dirs, retrieved_StudyInstanceUIDs] = cfmm_dcm4che_utils.retrieve_by_key(
         matching_key, retrieve_dest_dir, downloaded_uids_filename, timeout_sec=1800)
 
-    for item in retrieved_dicom_dirs:
-        logger.info('retrieved dicoms to {}'.format(item))
+    for retrieved_dicom_dir in retrieved_dicom_dirs:
+        logger.info('retrieved dicoms to {}'.format(retrieved_dicom_dir))
+
+    # insert ProtocolName and SeriesDescription tag
+    # some cfmm 9.4T data missing these two tags, which cause error when run tar2bids(heudiconv)
+    for retrieved_dicom_dir in retrieved_dicom_dirs:
+        insert_tag(retrieved_dicom_dir)
 
     # #######
     # # tar
