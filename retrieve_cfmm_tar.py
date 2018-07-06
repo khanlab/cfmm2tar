@@ -53,6 +53,21 @@ def insert_tag(dicom_dir):
                     logger.info(
                         "inserted SeriesDescription 'unnamed' to {}".format(full_filename))
 
+                if "ContentDate" not in ds:
+                    if "StudyDate" in ds:
+                        date = ds.StudyDate
+                    elif "SeriesDate" in ds:
+                        date = ds.SeriesDate
+                    elif "AcquisitionDate" in ds:
+                        date = ds.AcquisitionDate
+                    else:
+                        date = '19700101'
+
+                    ds.add_new((0x0008, 0x0023), 'DA', date)
+                    ds.save_as(full_filename)
+                    logger.info(
+                        "inserted ContentDate {} to {}".format(date, full_filename))
+
             except Exception as e:
                 logger.exception(e)
 
