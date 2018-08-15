@@ -44,14 +44,12 @@ def insert_tag(dicom_dir):
 
                     ds.add_new((0x0018, 0x1030), 'LO', 'unnamed')
                     ds.save_as(full_filename)
-                    logger.info(
-                        "Inserted ProtocolName 'unnamed' to {}".format(full_filename))
+                    #logger.info("Inserted ProtocolName 'unnamed' to {}".format(full_filename))
 
                 if "SeriesDescription" not in ds:
                     ds.add_new((0x0008, 0x103e), 'LO', 'unnamed')
                     ds.save_as(full_filename)
-                    logger.info(
-                        "inserted SeriesDescription 'unnamed' to {}".format(full_filename))
+                    # logger.info(inserted SeriesDescription 'unnamed' to {}".format(full_filename))
 
                 if "ContentDate" not in ds:
                     if "StudyDate" in ds:
@@ -65,8 +63,7 @@ def insert_tag(dicom_dir):
 
                     ds.add_new((0x0008, 0x0023), 'DA', date)
                     ds.save_as(full_filename)
-                    logger.info(
-                        "inserted ContentDate {} to {}".format(date, full_filename))
+                    # logger.info("inserted ContentDate {} to {}".format(date, full_filename))
 
             except Exception as e:
                 logger.exception(e)
@@ -84,12 +81,12 @@ def main(uwo_username,
          downloaded_uids_filename,
          dcm4che_path):
     '''
-    main workflow: query,retrieve,tar
+    main workflow: for each study: query,retrieve,tar
     '''
 
     logger = logging.getLogger(__name__)
 
-    # retrieve
+    #  matching key
     matching_key = "-m StudyDescription='{}' -m StudyDate='{}' -m PatientName='{}'".format(
         PI_matching_key, study_date, patient_name)
 
@@ -97,25 +94,45 @@ def main(uwo_username,
     cfmm_dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
         connect, uwo_username, uwo_password, dcm4che_path)
 
-    [retrieved_dicom_dirs, retrieved_StudyInstanceUIDs] = cfmm_dcm4che_utils.retrieve_by_key(
-        matching_key, retrieve_dest_dir, downloaded_uids_filename, timeout_sec=1800)
+    # get all StudyInstanceUIDs
+    StudyInstanceUIDs = cfmm_dcm4che_utils.get_StudyInstanceUID_by_matching_key(
+        matching_key)
 
-    for retrieved_dicom_dir in retrieved_dicom_dirs:
+    # retrieve each study by StudyInstanceUID
+    for index, StudyInstanceUID in enumerate(StudyInstanceUIDs):
+        # load downloaded StudyInstanceUIDs file
+        downloaded_uids = []
+        if downloaded_uids_filename:
+            with open(downloaded_uids_filename, 'r') as f:
+                # downloaded_uids=f.read().replace('\n', ' ')
+                downloaded_uids = f.read().splitlines()
+
+        # check if StudyInstanceUID has been downloaded
+        if StudyInstanceUID in downloaded_uids:
+            logger.info(
+                'Skipping existing StudyInstanceUID-{}\n'.format(StudyInstanceUID))
+            continue
+
+        logger.info('Retrieving #{} of {}: StudyInstanceUID-{}\n'.format(
+            index+1, len(StudyInstanceUIDs), StudyInstanceUID))
+
+        # retrieve
+        # retrieved_dicom_dir: example '/retrieve_dest_dir/1.3.12.2.1107.xx'
+        retrieved_dicom_dir = cfmm_dcm4che_utils.retrieve_by_StudyInstanceUID(
+            StudyInstanceUID, retrieve_dest_dir, timeout_sec=1800)
+
         logger.info('retrieved dicoms to {}'.format(retrieved_dicom_dir))
 
-    # insert ProtocolName and SeriesDescription tag
-    # some cfmm 9.4T data missing these two tags, which cause error when run tar2bids(heudiconv)
-    for retrieved_dicom_dir in retrieved_dicom_dirs:
+        # insert ProtocolName and SeriesDescription tag
+        # some cfmm 9.4T data missing these two tags, which cause error when run tar2bids(heudiconv)
         insert_tag(retrieved_dicom_dir)
 
-    # #######
-    # # tar
-    # #######
-    if not os.path.exists(tar_dest_dir):
-        os.makedirs(tar_dest_dir)
+        #######
+        # tar
+        #######
+        if not os.path.exists(tar_dest_dir):
+            os.makedirs(tar_dest_dir)
 
-    # retrieved_dicom_dirs =['/tmp/1.3.12.2.1107.xx', '/tmp/1.3.12.2.1107.5.2.34.xx',...]
-    for retrieved_dicom_dir, retrieved_StudyInstanceUID in zip(retrieved_dicom_dirs, retrieved_StudyInstanceUIDs):
         with DicomSorter.DicomSorter(retrieved_dicom_dir, sort_rules.sort_rule_CFMM, tar_dest_dir) as d:
             # according to CFMM's rule, folder depth is 5:
             # pi/project/study_date/patient/studyID_and_hash_studyInstanceUID
@@ -129,19 +146,24 @@ def main(uwo_username,
             # .uid file
             uid_full_filename = tar_full_filename[:-3]+"uid"
             with open(uid_full_filename, 'w') as f:
-                f.write(retrieved_StudyInstanceUID+'\n')
+                f.write(StudyInstanceUID+'\n')
 
             logger.info("uid file created: {}".format(uid_full_filename))
 
-            #  remove retried dir
-            if not keep_sorted_dest_dir_flag:
-                shutil.rmtree(retrieved_dicom_dir)
+        # update downloaded_uids_filename
+        if downloaded_uids_filename:
+            with open(downloaded_uids_filename, 'a') as f:
+                f.write(StudyInstanceUID+'\n')
+
+        #  remove retrieved dir
+        if not keep_sorted_dest_dir_flag:
+            shutil.rmtree(retrieved_dicom_dir)
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 10:
-        print ("Usage: python " + os.path.basename(__file__) +
-               " uwo_username \
+        print("Usage: python " + os.path.basename(__file__) +
+              " uwo_username \
                  uwo_password \
                  connect \
                  PI_matching_key \

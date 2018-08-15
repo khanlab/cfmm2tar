@@ -15,15 +15,17 @@ TGZ_DEST_DIR=/home/ylu/test/retrieve_cfmm_tgz
 SCAN_DATE='20170529'
 PATIENT_NAME='*'
 
-LIST_DOWNLOADED_UIDS=/mnt/hgfs/projects/cfmm2tar/src/test/downloaded_uids.txt
+MULTI_SCAN_DATE='20170529-'
+
+LIST_DOWNLOADED_UIDS=./downloaded_uids.txt
 
 # MATCHING_KEY="-m StudyDescription='Khan*' -m StudyDate='20171116'"
-DCM4CHE_PATH='docker run -v /home:/home --rm yinglilu/dcm4che:0.3'
-#DCM4CHE_PATH=''
+#DCM4CHE_PATH='docker run -v /home:/home -v /tmp:/tmp --rm yinglilu/dcm4che:0.3'
+DCM4CHE_PATH=''
 
 SINGULARITY=~/apps/singularity/bin/singularity
 SINGULARITY_IMAGE=~/singularities/cfmm2tar.simg
-SINGULARITY_FILE=Singularity.v0.0.1c
+SINGULARITY_FILE=Singularity.V0.0.1g
 
 ######
 # test retrieve_cfmm_tar.py   
@@ -31,9 +33,13 @@ SINGULARITY_FILE=Singularity.v0.0.1c
 test_small:
 	python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} ${PI} ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  ${SCAN_DATE} ${PATIENT_NAME} ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
 
-test_uids:
-	#test downloaded_uids_filename
-	python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} ${PI} ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  '20171116' ${PATIENT_NAME} ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
+test_uids_file:
+	#re-run test_small, should see 'Skipping...'
+	python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} ${PI} ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  ${SCAN_DATE} ${PATIENT_NAME} ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
+
+test_multi_studies:
+	python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} ${PI} ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  ${MULTI_SCAN_DATE} ${PATIENT_NAME} ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
+
 
 test_cmrr:
 	#PI='*'
@@ -49,7 +55,6 @@ test_cmrr:
 test_cmrr2tar_insert_tag:
 		python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} '*' ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  '*' '20180626' ${LIST_DOWNLOADED_UIDS}
 
-
 ######
 # test cfmm2tar
 ######
@@ -59,9 +64,11 @@ test_cfmm2tar_small:
 test_cfmm2tar_big:
 	../cfmm2tar -d '20171108' ${TGZ_DEST_DIR}
 
+test_cfmm2tar_multi_studies:
+	../cfmm2tar -d '20171108-' ${TGZ_DEST_DIR}
+
 test_cfmm2tar_cmrr:
 	../cfmm2tar -n '2017_11_30_MS12' ${TGZ_DEST_DIR}
-
 
 
 ######
@@ -69,7 +76,6 @@ test_cfmm2tar_cmrr:
 ######
 build:
 	cd ../; sudo ${SINGULARITY} build --force ${SINGULARITY_IMAGE} ${SINGULARITY_FILE}; cd -
- 	#cd ../; sudo ${SINGULARITY} build --force ${SINGULARITY_IMAGE} ${SINGULARITY_FILE}; cd -
-
+ 	
 test_singularity_cfmm2tar_cmrr:
-	${SINGULARITY} run -B /mnt:/mnt -B /home:/home -B /tmp:/tmp ${SINGULARITY_IMAGE} -n '2017_11_30_MS12' ${TGZ_DEST_DIR}
+	${SINGULARITY} run -B /mnt:/mnt -B /home:/home -B /scratch -B /tmp:/tmp ${SINGULARITY_IMAGE} -n '2017_11_30_MS12' ${TGZ_DEST_DIR}

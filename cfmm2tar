@@ -90,7 +90,14 @@ fi
 KEEP_SORTED_DICOM='False'
 CONNECT='CFMM-Public@dicom.cfmm.robarts.ca:11112'
 
-DICOMS_DIR=$OUTPUT_DIR/dicoms
+#retrieve dicoms to this folder
+if [[ -v SCRATCH ]] #if run on SHARCNET, SCRATCH is normally pre-defined to /scratch/$USER
+then
+  DICOMS_DIR=$SCRATCH/cfmm2tar_intermediate_dicoms
+else
+  DICOMS_DIR=$OUTPUT_DIR/cfmm2tar_intermediate_dicoms
+fi
+
 mkdir -p $OUTPUT_DIR $DICOMS_DIR
 
 #singularity image defined in CONFIG_DCM_RETRIEVE file
