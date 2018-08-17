@@ -61,8 +61,6 @@ bash install_dcm4che_ubuntu.sh /opt
 #########
 %environment
 
-export SCRATCH=/scratch/$USER
-
 #export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 #anaconda2

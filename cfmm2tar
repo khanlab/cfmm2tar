@@ -23,19 +23,25 @@ function usage {
   echo "Retrieves studies from dicom server based on Principal^Project, Date and/or PatientName.  If no search strings provided, all studies are downloaded"
   echo "Uses credentials in ~/.uwo_credentials (line1: username, line2: password)  or prompts for username/password" 
   echo ""
-  echo "Usage: `basename $0` <search options>  <output folder> "
+  echo "Usage: `basename $0` [optional options] <search options>  <output folder> "
+  echo "                       "
+  echo "    Optional options:  "
+  echo "        -U 'path/to/downloaded_uid_list[default:no]'"
+  echo "        -c 'path/to/uwo_credentials[default:~/.uwo_credentials]'"
+  echo "        -t 'path/to/intermediate_dicoms_dir[default:<output folder>/cfmm2tar_intermediate_dicoms'"
+  echo "                       "
   echo "    Search Options:  "
-  echo "	-n 'PatientName'"
-  echo "	-p 'Principal^Project'"
-  echo "	-d 'Date'"
+  echo "        -d 'Date'"
+  echo "        -n 'PatientName'"
+  echo "        -p 'Principal^Project'"
   echo ""
   echo "	Example (all scans on specific date): `basename $0` -d '20170530' myfolder"
   echo "	Example (all scans since date): `basename $0` -d '20170530-' myfolder"
   echo "	Example (all scans in date range): `basename $0` -d '20170530-20170827' myfolder"
   echo "	Example (specific Principal^Project on all dates): `basename $0` -p 'Khan^NeuroAnalytics'  myfolder"
   echo "	Example (specific PatientName searc): `basename $0` -n '*subj01*'  myfolder"
-
-
+  echo "	Example (specify downloaded_uid_list file): `basename $0` -U ~/downloaded_uid_list.txt -n '*subj01*'  myfolder"
+  echo "	Example (specify intermediate dicoms dir): `basename $0` -t /scratch/\$USER/cfmm2tar_intermediate_dicoms -n '*subj01*'  myfolder"
 }
 
 execpath=`dirname $0`
@@ -52,14 +58,16 @@ NAME_SEARCH=\'*\'
 
 DOWNLOADED_UID_LIST=
 UWO_CREDNTIALS=~/.uwo_credentials
+DICOMS_DIR=
 
-while getopts "d:n:p:U:c:" options; do
+while getopts "d:n:p:U:c:t:" options; do
  case $options in
     d ) DATE_SEARCH=\'$OPTARG\';;
     n ) NAME_SEARCH=\'$OPTARG\';;
     p ) STUDY_SEARCH=\'$OPTARG\';;
     U ) DOWNLOADED_UID_LIST=$OPTARG;;
     c ) UWO_CREDNTIALS=$OPTARG;;
+    t ) DICOMS_DIR=$OPTARG;;
     * ) usage
 	exit 1;;
  esac
@@ -73,11 +81,6 @@ then
 	exit 1
 fi
 
-
-OUTPUT_DIR=$1
-
-shift 1 
-
 if [ ! -e $UWO_CREDNTIALS ]
 then
 read -p "UWO Username: " UWO_USERNAME
@@ -87,15 +90,24 @@ UWO_USERNAME=$(sed -n '1 p' ${UWO_CREDNTIALS})
 UWO_PASSWORD=$(sed -n '2 p' ${UWO_CREDNTIALS})
 fi
 
+# check if DOWNLOADED_UID_LIST file exit or not
+if [ ! -f $DOWNLOADED_UID_LIST ]; then
+    dirname_temp=`dirname $DOWNLOADED_UID_LIST`
+    if [ ! -d $dirname_temp ]; then
+      echo $dirname_temp
+      mkdir -p $dirname_temp
+    fi
+    touch $DOWNLOADED_UID_LIST
+fi
+
 KEEP_SORTED_DICOM='False'
 CONNECT='CFMM-Public@dicom.cfmm.robarts.ca:11112'
 
+OUTPUT_DIR=$1
 #retrieve dicoms to this folder
-if [[ -v SCRATCH ]] #if run on SHARCNET, SCRATCH is normally pre-defined to /scratch/$USER
+if [ -z "$DICOMS_DIR" ] #empty: not specify '-t /path/to/dir' in command line
 then
-  DICOMS_DIR=$SCRATCH/cfmm2tar_intermediate_dicoms
-else
-  DICOMS_DIR=$OUTPUT_DIR/cfmm2tar_intermediate_dicoms
+    DICOMS_DIR=$OUTPUT_DIR/cfmm2tar_intermediate_dicoms
 fi
 
 mkdir -p $OUTPUT_DIR $DICOMS_DIR

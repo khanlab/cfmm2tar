@@ -61,6 +61,14 @@ test_cmrr2tar_insert_tag:
 test_cfmm2tar_small:
 	../cfmm2tar -d ${SCAN_DATE} ${TGZ_DEST_DIR}
 
+test_cfmm2tar_t:
+	#test -t
+	../cfmm2tar -t ~/test/cfmm2tar_intermediate_dicoms -d ${SCAN_DATE} ${TGZ_DEST_DIR}
+
+test_cfmm2tar_U:
+	#test -t
+	../cfmm2tar -U ~/test/uid/uid.txt -d ${SCAN_DATE} ${TGZ_DEST_DIR}
+
 test_cfmm2tar_big:
 	../cfmm2tar -d '20171108' ${TGZ_DEST_DIR}
 
