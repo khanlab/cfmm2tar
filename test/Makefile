@@ -20,8 +20,8 @@ MULTI_SCAN_DATE='20170529-'
 LIST_DOWNLOADED_UIDS=./downloaded_uids.txt
 
 # MATCHING_KEY="-m StudyDescription='Khan*' -m StudyDate='20171116'"
-#DCM4CHE_PATH='docker run -v /home:/home -v /tmp:/tmp --rm yinglilu/dcm4che:0.3'
-DCM4CHE_PATH=''
+DCM4CHE_PATH='docker run -v /home:/home -v /tmp:/tmp --rm yinglilu/dcm4che:0.3'
+#DCM4CHE_PATH=''
 
 SINGULARITY=~/apps/singularity/bin/singularity
 SINGULARITY_IMAGE=~/singularities/cfmm2tar.simg
@@ -40,12 +40,16 @@ test_uids_file:
 test_multi_studies:
 	python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} ${PI} ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  ${MULTI_SCAN_DATE} ${PATIENT_NAME} ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
 
+test_empty_dicom_folder:
+	#retrieved folder is empty
+	python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} '*' ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  20181015 '*' ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
 
 test_cmrr:
 	#PI='*'
 	#SCAN_DATE='*'
 	#PATIENT_NAME=2017_11_30_MS12
 	python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} '*' ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  '*' '2017_11_30_MS12' ${LIST_DOWNLOADED_UIDS}
+
 
 # test data: tissue 9.4T missing ProtocolName and SeriesDescption tag,wich causing error when run tar2bids(heudiconv)
 # PI: Khan

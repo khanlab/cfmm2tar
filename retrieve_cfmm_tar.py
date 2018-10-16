@@ -139,6 +139,10 @@ def main(uwo_username,
             # a list with one element, retrieved_dicom_dir contain's one study
             tar_full_filenames = d.tar(5)
 
+            # if there is no dicom files in the retrieved folder, tar_full_filenames is None
+            if not tar_full_filenames:
+                continue
+
             # logging
             tar_full_filename = tar_full_filenames[0]
             logger.info("tar file created: {}".format(tar_full_filename))
