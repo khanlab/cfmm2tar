@@ -20,12 +20,12 @@ MULTI_SCAN_DATE='20170529-'
 LIST_DOWNLOADED_UIDS=./downloaded_uids.txt
 
 # MATCHING_KEY="-m StudyDescription='Khan*' -m StudyDate='20171116'"
-DCM4CHE_PATH='docker run -v /home:/home -v /tmp:/tmp --rm yinglilu/dcm4che:0.3'
+DCM4CHE_PATH='docker run -v /home:/home -v /tmp:/tmp --rm yinglilu/dcm4che:0.4'
 #DCM4CHE_PATH=''
 
 SINGULARITY=~/apps/singularity/bin/singularity
 SINGULARITY_IMAGE=~/singularities/cfmm2tar.simg
-SINGULARITY_FILE=Singularity.V0.0.1g
+SINGULARITY_FILE=Singularity.v0.0.1i
 
 ######
 # test retrieve_cfmm_tar.py   
