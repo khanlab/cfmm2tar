@@ -71,8 +71,8 @@ echo 'EnhancedMRImageStorage:ImplicitVRLittleEndian;ExplicitVRLittleEndian'>>/op
 #########
 %environment
 
-#anaconda2
-export PATH=/opt/anaconda2/bin/:$PATH
+#dicomunwrap
+export PATH=/apps/DicomRaw/bin:$PATH
 
 #dcm4che
 export PATH=/opt/dcm4che-3.3.8/bin:$PATH
