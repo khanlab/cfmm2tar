@@ -60,6 +60,8 @@ do
   keytool -noprompt -importcert -trustcacerts -alias letsencrypt -file <(wget -O - -o /dev/null ${LETSENCRYPT_CA_URL}) -keystore $f -storepass secret
 done
 
+ln -s ${D_DIR} /opt/dcm4che
+
 #use this command to test.
 #by StudyInstanceUID
 #getscu --bind DEFAULT --connect CFMM-Public@dicom.cfmm.robarts.ca:11112 --tls-aes --user YOUR_UWO_USERNAME --user-pass YOUR_PASSWORD, -m StudyInstanceUID=1.3.12.2.1107.5.2.34.18932.30000017052914152689000000013
