@@ -40,7 +40,6 @@ sudo pip install --upgrade setuptools
 #for some unknown reason, need change the mode:
 chmod a+x /apps/cfmm2tar/*.py
 
-
 ##install pydicom
 #mkdir /opt/pydicom
 #cd /opt/pydicom
