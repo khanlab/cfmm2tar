@@ -113,7 +113,7 @@ class DicomSorter():
             # dicomraw wrapped (wrapped by Igor's script)
             is_dicomraw_wrapped = \
                 (0x0177, 0x0010) in dataset and \
-                dataset[(0x0177, 0x0010)].value.startswith('Robarts^CFMM')
+                dataset[(0x0177, 0x0010)].value.startswith('Robarts^CFMM^DicomRawAppend')
 
             # siemens CMRR MB sequence
             is_siemens_CMRR_MB_sequance = \

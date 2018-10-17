@@ -48,7 +48,7 @@ test_cmrr:
 	#PI='*'
 	#SCAN_DATE='*'
 	#PATIENT_NAME=2017_11_30_MS12
-	python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} '*' ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  '*' '2017_11_30_MS12' ${LIST_DOWNLOADED_UIDS}
+	python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} '*' ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  '*' '2017_11_30_MS12' ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
 
 
 # test data: tissue 9.4T missing ProtocolName and SeriesDescption tag,wich causing error when run tar2bids(heudiconv)
