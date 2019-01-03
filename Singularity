@@ -2,20 +2,18 @@ Bootstrap: docker
 From: ubuntu:xenial
 #########
 
-#########
 %setup
 #########
 mkdir -p $SINGULARITY_ROOTFS/src
-cp -Rv . $SINGULARITY_ROOTFS/src
+cp *.sh  $SINGULARITY_ROOTFS/src
 
-
+mkdir -p $SINGULARITY_ROOTFS/apps/cfmm2tar
+cp *.py  $SINGULARITY_ROOTFS/apps/cfmm2tar
+cp cfmm2tar $SINGULARITY_ROOTFS/apps/cfmm2tar
 
 #########
 %post
 #########
-
-echo $SCRATCH
-
 
 #needed for keytool
 if [ ! -e /dev/fd ]
@@ -36,42 +34,51 @@ apt-get update && apt-get install -y --no-install-recommends apt-utils \
     rsync \
     openssh-client
 
-pip install -U pip setuptools
+sudo pip install --upgrade pip
+sudo pip install --upgrade setuptools
 
-cd /src
+#for some unknown reason, need change the mode:
+chmod a+x /apps/cfmm2tar/*.py
 
-#install pydicom
-mkdir /opt/pydicom
-cd /opt/pydicom
-git clone https://www.github.com/pydicom/pydicom.git
-cd pydicom
-git checkout ebf6a79602348d003a1d1324c66626f9f2b05432
-python setup.py install
+##install pydicom
+#mkdir /opt/pydicom
+#cd /opt/pydicom
+#git clone https://www.github.com/pydicom/pydicom.git
+#cd pydicom
+#git checkout ebf6a79602348d003a1d1324c66626f9f2b05432
+#python setup.py install
 
+#dicomunwrap, will install pydicom
+cd /apps
+git clone https://gitlab.com/cfmm/DicomRaw
+cd DicomRaw
+sudo pip install -r requirements.txt
 
 #needed when install dcm4che
 apt-get install -y default-jre
-
 
 #install dcm4che
 cd /src
 bash install_dcm4che_ubuntu.sh /opt
 
+#For retrieving physio dicom files. without this line, all the physio series will not be retrieved with getscu
+echo '1.3.12.2.1107.5.9.1:ImplicitVRLittleEndian;ExplicitVRLittleEndian' >>/opt/dcm4che-3.3.8/etc/getscu/store-tcs.properties
+
+#allow the getscu client to download CFMM's 9.4T data.
+echo 'EnhancedMRImageStorage:ImplicitVRLittleEndian;ExplicitVRLittleEndian'>>/opt/dcm4che-3.3.8/etc/getscu/store-tcs.properties
 
 #########
 %environment
 
-#export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
-#anaconda2
-export PATH=/opt/anaconda2/bin/:$PATH
+#dicomunwrap
+export PATH=/apps/DicomRaw/bin:$PATH
 
 #dcm4che
 export PATH=/opt/dcm4che-3.3.8/bin:$PATH
 
 #python scripts
-export PATH=/src:$PATH
-export _JAVA_OPTIONS="-Xmx4048m"
+export PATH=/apps/cfmm2tar:$PATH
+export _JAVA_OPTIONS="-Xmx2048m"
 
 %runscript
-exec cfmm2tar $@
+exec cfmm2tar "$@"
