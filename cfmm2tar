@@ -124,3 +124,6 @@ ${OUTPUT_DIR} \
 ${DATE_SEARCH} \
 ${NAME_SEARCH} \
 ${DOWNLOADED_UID_LIST}
+
+#clean-up after ourselves
+rmdir $DICOMS_DIR
