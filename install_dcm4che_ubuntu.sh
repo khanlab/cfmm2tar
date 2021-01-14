@@ -54,7 +54,7 @@ fi
 #fi
 
 # this is a bash script
-LETSENCRYPT_CA_URL=https://letsencrypt.org/certs/letsencryptauthorityx3.pem.txt
+LETSENCRYPT_CA_URL=https://letsencrypt.org/certs/lets-encrypt-r3.pem
 for f in $(find ${D_DIR}/etc -name cacerts.jks)
 do
   keytool -noprompt -importcert -trustcacerts -alias letsencrypt -file <(wget -O - -o /dev/null ${LETSENCRYPT_CA_URL}) -keystore $f -storepass secret
