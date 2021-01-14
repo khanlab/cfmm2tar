@@ -18,9 +18,9 @@ if [ -d $D_DIR ]; then
 	rm -rf $D_DIR
 fi
 
-curl -o temp.zip https://iweb.dl.sourceforge.net/project/dcm4che/dcm4che3/3.3.8/$VERSION-bin.zip
-unzip temp.zip -d $DEST
-rm temp.zip
+wget https://iweb.dl.sourceforge.net/project/dcm4che/dcm4che3/3.3.8/$VERSION-bin.zip
+unzip $VERSION-bin.zip -d $DEST
+rm $VERSION-bin.zip
 
 
 if [ -e $HOME/.profile ]; then #ubuntu
