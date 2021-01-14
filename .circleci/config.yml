@@ -1,0 +1,93 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: docker:17.05.0-ce-git
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Building Docker container
+          no_output_timeout: 1h
+          command: |
+              export DOCKER_NAME=$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME:latest
+              docker build -t $DOCKER_NAME .
+              docker save $DOCKER_NAME -o /tmp/docker_image.tar
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+            - docker_image.tar
+
+  deploy_dev:
+    docker:
+      - image: docker:17.05.0-ce-git
+    steps:
+      - setup_remote_docker            
+      - attach_workspace:
+          at: /tmp/workspace
+      - run: 
+          name: Load docker image
+          command: |
+            docker load -i /tmp/workspace/docker_image.tar
+      - run:
+          name: Pushing build to docker hub
+          command: |
+            docker login -u $DOCKER_USER -p $DOCKER_PASS
+            export DOCKER_NAME=$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME:latest
+            # tag and push here:
+            echo docker push $DOCKER_NAME
+            docker push $DOCKER_NAME
+
+  deploy_release:
+    docker:
+      - image: docker:17.05.0-ce-git
+    steps:
+      - setup_remote_docker            
+      - attach_workspace:
+          at: /tmp/workspace
+      - run: 
+          name: Load docker image
+          command: |
+            docker load -i /tmp/workspace/docker_image.tar
+      - run:
+          name: Pushing build to docker hub
+          command: |
+            docker login -u $DOCKER_USER -p $DOCKER_PASS
+            export DOCKER_NAME=$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME:latest
+            export DOCKER_RELEASE=$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_TAG
+            # tag and push here:
+            echo docker tag $DOCKER_NAME $DOCKER_RELEASE
+            docker tag $DOCKER_NAME $DOCKER_RELEASE
+            docker push $DOCKER_RELEASE
+            docker push $DOCKER_NAME
+
+workflows:
+  version: 2
+  commit:
+    jobs: 
+      - build:
+          context: org-global
+          filters:
+            tags:
+              only: /.*/
+      - deploy_dev:
+          requires:
+            - build
+            - test
+          filters:
+            tags:
+              ignore: /^v.*/
+          context: org-global
+      - deploy_release:
+          requires:
+            - build
+            - test
+          context: org-global
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+
+
+
