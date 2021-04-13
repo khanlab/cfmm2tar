@@ -1,4 +1,4 @@
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 LABEL author=yinglilu@gmail.com
 LABEL maintainer=isolove@uwo.ca
 LABEL version=0.0.2
