@@ -155,6 +155,27 @@ class Dcm4cheUtils():
 
         return StudyInstanceUID_list
 
+    def get_all_pi_names(self):
+        """Find all PIs the user has access to (by StudyDescription).
+
+        Specifically, find all StudyDescriptions, take the portion before
+        the caret, and return each unique value."""
+        cmd = self._findscu_str +\
+            " -r StudyDescription " +\
+            "| grep StudyDescription " +\
+            "| cut -d[ -f 2 | cut -d] -f 1 " +\
+            "| grep . " +\
+            "| cut -d^ -f 1 " +\
+            "| sort -u"
+
+        out, err, _ = self._get_stdout_stderr_returncode(cmd)
+
+        if err and err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n":
+            self.logger.error(err)
+
+        return out.splitlines()
+
+
     def retrieve_by_StudyInstanceUID(self, StudyInstanceUID, output_dir, timeout_sec=1800):
         '''
         retrive dicom file by key StudyInstanceUID. If PACS not ready for retrieving(e.g. console still sending data to PACS), it will keep checking until time out (30 mins)

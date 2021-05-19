@@ -34,6 +34,10 @@ logging.info('------testing------ get_StudyInstanceUID_by_matching_key')
 r = cfmm_dcm4che_utils.get_StudyInstanceUID_by_matching_key(MATCHING_KEY)
 logging.info(r)
 
+logging.info('------testing------ get_all_pi_names')
+r = cfmm_dcm4che_utils.get_all_pi_names()
+logging.info(r)
+
 logging.info('------testing------ ready_for_retrieve')
 r = cfmm_dcm4che_utils._ready_for_retrieve(MATCHING_KEY)
 logging.info(r)
