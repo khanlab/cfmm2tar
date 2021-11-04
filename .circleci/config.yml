@@ -10,7 +10,8 @@ jobs:
           name: Building Docker container
           no_output_timeout: 1h
           command: |
-              export DOCKER_NAME=$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME:latest
+              if [ "$CIRCLE_BRANCH" = "master" -o "$CIRCLE_BRANCH" = "" ]; then MY_TAG=latest; else MY_TAG=$CIRCLE_BRANCH; fi
+              export DOCKER_NAME=$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME:$MY_TAG
               docker build -t $DOCKER_NAME .
               docker save $DOCKER_NAME -o /tmp/docker_image.tar
       - persist_to_workspace:
@@ -33,7 +34,8 @@ jobs:
           name: Pushing build to docker hub
           command: |
             docker login -u $DOCKER_USER -p $DOCKER_PASS
-            export DOCKER_NAME=$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME:latest
+            if [ "$CIRCLE_BRANCH" = "master" ]; then MY_TAG=latest; else MY_TAG=$CIRCLE_BRANCH; fi
+            export DOCKER_NAME=$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME:$MY_TAG
             # tag and push here:
             echo docker push $DOCKER_NAME
             docker push $DOCKER_NAME
