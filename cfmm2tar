@@ -101,7 +101,7 @@ if [ ! -f $DOWNLOADED_UID_LIST ]; then
 fi
 
 KEEP_SORTED_DICOM='False'
-CONNECT='CFMM-Public@dicom.cfmm.robarts.ca:11112'
+CONNECT='CFMM-Public@dicom2.cfmm.robarts.ca:11112'
 
 OUTPUT_DIR=$1
 #retrieve dicoms to this folder
