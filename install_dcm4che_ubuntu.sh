@@ -1,4 +1,6 @@
 #!/bin/bash
+set -x
+
 
 if [ "$#" -lt 1 ];then
 	echo "Usage: $0 <install folder (absolute path)>"
@@ -12,15 +14,14 @@ echo -n "installing dcm4che..." #-n without newline
 DEST=$1
 mkdir -p $DEST
 
-VERSION=dcm4che-3.3.8
-D_DIR=$DEST/$VERSION
+D_DIR=$DEST/dcm4che-$DCM4CHE_VERSION
 if [ -d $D_DIR ]; then
 	rm -rf $D_DIR
 fi
 
-wget https://iweb.dl.sourceforge.net/project/dcm4che/dcm4che3/3.3.8/$VERSION-bin.zip
-unzip $VERSION-bin.zip -d $DEST
-rm $VERSION-bin.zip
+wget https://iweb.dl.sourceforge.net/project/dcm4che/dcm4che3/$DCM4CHE_VERSION/dcm4che-$DCM4CHE_VERSION-bin.zip
+unzip dcm4che-$DCM4CHE_VERSION-bin.zip -d $DEST
+rm dcm4che-$DCM4CHE_VERSION-bin.zip
 
 
 if [ -e $HOME/.profile ]; then #ubuntu
@@ -55,7 +56,7 @@ fi
 
 # this is a bash script
 ISSUER_CA_URL=https://pki.uwo.ca/sectigo/certificates/SectigoRSAOrganizationValidationSecureServerCA-int.pem
-for f in $(find ${D_DIR}/etc -name cacerts.jks)
+for f in $(find ${D_DIR}/etc -name cacerts.jks -or -name cacerts.p12)
 do
   keytool -noprompt -importcert -trustcacerts -alias issuer -file <(wget -O - -o /dev/null ${ISSUER_CA_URL}) -keystore $f -storepass secret
 done

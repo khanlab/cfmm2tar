@@ -29,6 +29,7 @@ function usage {
   echo "        -U 'path/to/downloaded_uid_list[default:no]'"
   echo "        -c 'path/to/uwo_credentials[default:~/.uwo_credentials]'"
   echo "        -t 'path/to/intermediate_dicoms_dir[default:<output folder>/cfmm2tar_intermediate_dicoms'"
+  echo "        -s 'AETITLE@hostname:11112'"
   echo "                       "
   echo "    Search Options:  "
   echo "        -d 'Date'"
@@ -60,14 +61,16 @@ DOWNLOADED_UID_LIST=
 UWO_CREDNTIALS=~/.uwo_credentials
 DICOMS_DIR=
 
-while getopts "d:n:p:U:c:t:" options; do
+while getopts "d:n:p:U:c:t:s:x:" options; do
  case $options in
     d ) DATE_SEARCH=\'$OPTARG\';;
     n ) NAME_SEARCH=\'$OPTARG\';;
     p ) STUDY_SEARCH=\'$OPTARG\';;
     U ) DOWNLOADED_UID_LIST=$OPTARG;;
     c ) UWO_CREDNTIALS=$OPTARG;;
+    s ) DICOM_CONNECTION=$OPTARG;;
     t ) DICOMS_DIR=$OPTARG;;
+    x ) OTHER_OPTIONS="${OPTARG}";;
     * ) usage
 	exit 1;;
  esac
@@ -101,7 +104,6 @@ if [ ! -f $DOWNLOADED_UID_LIST ]; then
 fi
 
 KEEP_SORTED_DICOM='False'
-CONNECT='CFMM-Public@dicom2.cfmm.robarts.ca:11122'
 
 OUTPUT_DIR=$1
 #retrieve dicoms to this folder
@@ -116,13 +118,14 @@ mkdir -p $OUTPUT_DIR $DICOMS_DIR
 python $execpath/retrieve_cfmm_tar.py \
 ${UWO_USERNAME} \
 ${UWO_PASSWORD} \
-${CONNECT} \
+${DICOM_CONNECTION} \
 ${STUDY_SEARCH} \
 ${DICOMS_DIR} \
 ${KEEP_SORTED_DICOM} \
 ${OUTPUT_DIR} \
 ${DATE_SEARCH} \
 ${NAME_SEARCH} \
+"${OTHER_OPTIONS}" \
 ${DOWNLOADED_UID_LIST}
 
 #clean-up after ourselves

@@ -25,7 +25,7 @@ class Dcm4cheUtils():
     dcm4che utils
     '''
 
-    def __init__(self, connect, username, password, dcm4che_path=''):
+    def __init__(self, connect, username, password, dcm4che_path='', other_options=''):
         self.logger = logging.getLogger(__name__)
         self.connect = connect
         self.username = username
@@ -37,15 +37,17 @@ class Dcm4cheUtils():
             ' --bind  DEFAULT' +\
             ' --connect {}'.format(self.connect) +\
             ' --accept-timeout 10000 ' +\
-            ''' --tls-aes --user {} '''.format(pipes.quote(self.username)) +\
+            ' {} '.format(other_options) +\
+            ''' --user {} '''.format(pipes.quote(self.username)) +\
             ''' --user-pass {} '''.format(pipes.quote(self.password))
 
         self._getscu_str = \
             '''{} getscu'''.format(self.dcm4che_path) +\
             ' --bind  DEFAULT ' +\
             ' --connect {} '.format(self.connect) +\
-            ' --accept-timeout 10000 ' +\
-            ''' --tls-aes --user {} '''.format(pipes.quote(self.username)) +\
+            ' --accept-timeout 10000 ' + \
+            ' {} '.format(other_options) + \
+            ''' --user {} '''.format(pipes.quote(self.username)) +\
             ''' --user-pass {} '''.format(pipes.quote(self.password))
 
     def _get_stdout_stderr_returncode(self, cmd):
