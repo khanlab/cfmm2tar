@@ -78,6 +78,7 @@ def main(uwo_username,
          tar_dest_dir,
          study_date,
          patient_name,
+         other_options,
          downloaded_uids_filename,
          dcm4che_path):
     '''
@@ -92,7 +93,7 @@ def main(uwo_username,
 
     # Dcm4cheUtils
     cfmm_dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
-        connect, uwo_username, uwo_password, dcm4che_path)
+        connect, uwo_username, uwo_password, dcm4che_path, other_options)
 
     # get all StudyInstanceUIDs
     StudyInstanceUIDs = cfmm_dcm4che_utils.get_StudyInstanceUID_by_matching_key(
@@ -176,6 +177,7 @@ if __name__ == "__main__":
                  tgz_dest_dir \
                  scan_date \
                  patient_name \
+                 other_options \
                  [downloaded_uids_filename] \
                  [dcm4che_path]")
         sys.exit()
@@ -191,13 +193,17 @@ if __name__ == "__main__":
         study_date = sys.argv[8]
         patient_name = sys.argv[9]
         if len(sys.argv) > 10:
-            downloaded_uids_filename = sys.argv[10]
+            other_options = sys.argv[10]
+        else:
+            other_options = ''
+        if len(sys.argv) > 11:
+            downloaded_uids_filename = sys.argv[11]
         else:
             downloaded_uids_filename = ''
 
-        if len(sys.argv) > 11:
+        if len(sys.argv) > 12:
             # use dcm4che singularity/docker container runs on host
-            dcm4che_path = sys.argv[11]
+            dcm4che_path = sys.argv[12]
         else:
             # dcm4che installed on host or singularity container's PATH
             dcm4che_path = ''
@@ -211,5 +217,6 @@ if __name__ == "__main__":
              tgz_dest_dir,
              study_date,
              patient_name,
+             other_options,
              downloaded_uids_filename,
              dcm4che_path)
