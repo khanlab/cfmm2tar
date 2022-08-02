@@ -19,7 +19,7 @@ if [ -d $D_DIR ]; then
 	rm -rf $D_DIR
 fi
 
-wget https://iweb.dl.sourceforge.net/project/dcm4che/dcm4che3/$DCM4CHE_VERSION/dcm4che-$DCM4CHE_VERSION-bin.zip
+wget https://master.dl.sourceforge.net/project/dcm4che/dcm4che3/${DCM4CHE_VERSION}/dcm4che-${DCM4CHE_VERSION}-bin.zip
 unzip dcm4che-$DCM4CHE_VERSION-bin.zip -d $DEST
 rm dcm4che-$DCM4CHE_VERSION-bin.zip
 
