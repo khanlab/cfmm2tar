@@ -78,6 +78,7 @@ def main(uwo_username,
          tar_dest_dir,
          study_date,
          patient_name,
+         study_instance_uid,
          other_options,
          downloaded_uids_filename,
          dcm4che_path):
@@ -88,16 +89,16 @@ def main(uwo_username,
     logger = logging.getLogger(__name__)
 
     #  matching key
-    matching_key = "-m StudyDescription='{}' -m StudyDate='{}' -m PatientName='{}'".format(
-        PI_matching_key, study_date, patient_name)
+    matching_key = "-m StudyDescription='{}' -m StudyDate='{}' -m PatientName='{}' -m StudyInstanceUID='{}'".format(
+        PI_matching_key, study_date, patient_name, study_instance_uid)
 
     # Dcm4cheUtils
     cfmm_dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
         connect, uwo_username, uwo_password, dcm4che_path, other_options)
 
-    # get all StudyInstanceUIDs
-    StudyInstanceUIDs = cfmm_dcm4che_utils.get_StudyInstanceUID_by_matching_key(
-        matching_key)
+    # get all StudyInstanceUIDs (dropping duplicates)
+    StudyInstanceUIDs = list(set(cfmm_dcm4che_utils.get_StudyInstanceUID_by_matching_key(
+        matching_key)))
 
     # retrieve each study by StudyInstanceUID
     for index, StudyInstanceUID in enumerate(StudyInstanceUIDs):
@@ -166,7 +167,8 @@ def main(uwo_username,
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 10:
+    if len(sys.argv) < 11:
+        print(sys.argv)
         print("Usage: python " + os.path.basename(__file__) +
               " uwo_username \
                  uwo_password \
@@ -177,6 +179,7 @@ if __name__ == "__main__":
                  tgz_dest_dir \
                  scan_date \
                  patient_name \
+                 study_instance_uid \
                  other_options \
                  [downloaded_uids_filename] \
                  [dcm4che_path]")
@@ -192,18 +195,19 @@ if __name__ == "__main__":
         tgz_dest_dir = sys.argv[7]
         study_date = sys.argv[8]
         patient_name = sys.argv[9]
-        if len(sys.argv) > 10:
-            other_options = sys.argv[10]
+        study_instance_uid = sys.argv[10]
+        if len(sys.argv) > 11:
+            other_options = sys.argv[11]
         else:
             other_options = ''
-        if len(sys.argv) > 11:
-            downloaded_uids_filename = sys.argv[11]
+        if len(sys.argv) > 12:
+            downloaded_uids_filename = sys.argv[12]
         else:
             downloaded_uids_filename = ''
 
-        if len(sys.argv) > 12:
+        if len(sys.argv) > 13:
             # use dcm4che singularity/docker container runs on host
-            dcm4che_path = sys.argv[12]
+            dcm4che_path = sys.argv[13]
         else:
             # dcm4che installed on host or singularity container's PATH
             dcm4che_path = ''
@@ -217,6 +221,7 @@ if __name__ == "__main__":
              tgz_dest_dir,
              study_date,
              patient_name,
+             study_instance_uid,
              other_options,
              downloaded_uids_filename,
              dcm4che_path)
