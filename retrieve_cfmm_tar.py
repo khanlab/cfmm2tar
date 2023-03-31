@@ -88,17 +88,20 @@ def main(uwo_username,
 
     logger = logging.getLogger(__name__)
 
-    #  matching key
-    matching_key = "-m StudyDescription='{}' -m StudyDate='{}' -m PatientName='{}' -m StudyInstanceUID='{}'".format(
-        PI_matching_key, study_date, patient_name, study_instance_uid)
-
     # Dcm4cheUtils
     cfmm_dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
         connect, uwo_username, uwo_password, dcm4che_path, other_options)
 
-    # get all StudyInstanceUIDs (dropping duplicates)
-    StudyInstanceUIDs = list(set(cfmm_dcm4che_utils.get_StudyInstanceUID_by_matching_key(
-        matching_key)))
+    if study_instance_uid == "'*'":
+        #  matching key
+        matching_key = "-m StudyDescription='{}' -m StudyDate='{}' -m PatientName='{}'".format(
+            PI_matching_key, study_date, patient_name
+        )
+
+        # get all StudyInstanceUIDs (dropping duplicates)
+        StudyInstanceUIDs = list(set(cfmm_dcm4che_utils.get_StudyInstanceUID_by_matching_key(matching_key)))
+    else:
+        StudyInstanceUIDs = [study_instance_uid.replace('"', "",).replace("'", "")]
 
     # retrieve each study by StudyInstanceUID
     for index, StudyInstanceUID in enumerate(StudyInstanceUIDs):
