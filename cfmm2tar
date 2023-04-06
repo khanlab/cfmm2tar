@@ -35,12 +35,14 @@ function usage {
   echo "        -d 'Date'"
   echo "        -n 'PatientName'"
   echo "        -p 'Principal^Project'"
+  echo "        -u 'StudyInstanceUID' (Note: this is _not_ a search string, it will override any other search options and download the single specified StudyInstanceUID.)"
   echo ""
   echo "	Example (all scans on specific date): `basename $0` -d '20170530' myfolder"
   echo "	Example (all scans since date): `basename $0` -d '20170530-' myfolder"
   echo "	Example (all scans in date range): `basename $0` -d '20170530-20170827' myfolder"
   echo "	Example (specific Principal^Project on all dates): `basename $0` -p 'Khan^NeuroAnalytics'  myfolder"
   echo "	Example (specific PatientName searc): `basename $0` -n '*subj01*'  myfolder"
+  echo "        Example (specific StudyInstanceUID): `basename $0` -u '12345.123456.123.1234567' myfolder"
   echo "	Example (specify downloaded_uid_list file): `basename $0` -U ~/downloaded_uid_list.txt -n '*subj01*'  myfolder"
   echo "	Example (specify intermediate dicoms dir): `basename $0` -t /scratch/\$USER/cfmm2tar_intermediate_dicoms -n '*subj01*'  myfolder"
 }
@@ -56,16 +58,18 @@ execpath=`realpath $execpath`
 DATE_SEARCH=\'-\'
 STUDY_SEARCH=\'*\'
 NAME_SEARCH=\'*\'
+STUDYINSTANCEUID=\'*\'
 
 DOWNLOADED_UID_LIST=
 UWO_CREDNTIALS=~/.uwo_credentials
 DICOMS_DIR=
 
-while getopts "d:n:p:U:c:t:s:x:" options; do
+while getopts "d:n:p:u:U:c:t:s:x:" options; do
  case $options in
     d ) DATE_SEARCH=\'$OPTARG\';;
     n ) NAME_SEARCH=\'$OPTARG\';;
     p ) STUDY_SEARCH=\'$OPTARG\';;
+    u ) STUDYINSTANCEUID=\'$OPTARG\';;
     U ) DOWNLOADED_UID_LIST=$OPTARG;;
     c ) UWO_CREDNTIALS=$OPTARG;;
     s ) DICOM_CONNECTION=$OPTARG;;
@@ -125,6 +129,7 @@ ${KEEP_SORTED_DICOM} \
 ${OUTPUT_DIR} \
 ${DATE_SEARCH} \
 ${NAME_SEARCH} \
+${STUDYINSTANCEUID} \
 "${OTHER_OPTIONS}" \
 ${DOWNLOADED_UID_LIST}
 
