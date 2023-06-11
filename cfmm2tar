@@ -3,7 +3,7 @@
 #query,retrieve,and tgz CFMM's dicom data from sharcnet.
 
 # In order to run this script as a cron task:
-#   1.save your uwo username and password to ~/.uwo_crendential:
+#   1.save your uwo username and password to ~/.uwo_credentials:
 #     <username>
 #     <password>
 #     chmod 600 ~/.uwo_credentials 
