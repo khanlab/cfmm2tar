@@ -19,9 +19,9 @@ import shutil
 
 import pydicom
 
-import DicomSorter
-import sort_rules
-import Dcm4cheUtils
+from . import DicomSorter
+from . import sort_rules
+from . import Dcm4cheUtils
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s-%(levelname)s-%(message)s', datefmt='%Y/%m/%d %I:%M:%S')

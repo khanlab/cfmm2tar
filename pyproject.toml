@@ -17,6 +17,9 @@ dependencies = [
     "pydicom>=2.4.0",
 ]
 
+[project.scripts]
+cfmm2tar = "cfmm2tar.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

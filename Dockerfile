@@ -27,17 +27,13 @@ ENV PATH="/root/.cargo/bin:$PATH"
 # enable TLSv1.1 for dcm4chee v2
 RUN apt-get install -y default-jre && sed -i 's/TLSv1.1, //g' /etc/java-11-openjdk/security/java.security
 
-# Copy files from repo
-COPY *.py /apps/cfmm2tar/
-
-#for some unknown reason, need change the mode:
-RUN chmod a+x /apps/cfmm2tar/*.py
-
-# Copy pyproject.toml for dependency installation
-COPY pyproject.toml /apps/cfmm2tar/
+# Copy Python package structure
+COPY cfmm2tar /apps/cfmm2tar_src/cfmm2tar
+COPY pyproject.toml /apps/cfmm2tar_src/
+COPY README.md /apps/cfmm2tar_src/
 
 # Install Python dependencies using uv
-RUN cd /apps/cfmm2tar && uv pip install --system -e .
+RUN cd /apps/cfmm2tar_src && uv pip install --system -e .
 
 #dicomunwrap, will install pydicom
 RUN cd /apps && git clone https://gitlab.com/cfmm/DicomRaw && cd DicomRaw && uv pip install --system -r requirements.txt
@@ -54,10 +50,8 @@ RUN echo '1.3.12.2.1107.5.9.1:ImplicitVRLittleEndian;ExplicitVRLittleEndian' >>/
 #allow the getscu client to download CFMM's 9.4T data.
 RUN echo 'EnhancedMRImageStorage:ImplicitVRLittleEndian;ExplicitVRLittleEndian'>>/opt/dcm4che/etc/getscu/store-tcs.properties
 
-COPY cfmm2tar /apps/cfmm2tar/
-
 # env vars:
-ENV PATH=/apps/DicomRaw/bin:/opt/dcm4che/bin:/apps/cfmm2tar:$PATH
+ENV PATH=/apps/DicomRaw/bin:/opt/dcm4che/bin:$PATH
 ENV _JAVA_OPTIONS="-Xmx2048m"
 
 # dcm4chee v2 server
@@ -69,4 +63,4 @@ ENV DICOM_CONNECTION=CFMM@dicom.cfmm.uwo.ca:11112
 ENV OTHER_OPTIONS='--tls-aes'
 
 
-ENTRYPOINT ["/apps/cfmm2tar/cfmm2tar"]
+ENTRYPOINT ["cfmm2tar"]
