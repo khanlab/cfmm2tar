@@ -110,13 +110,15 @@ UWO_PASSWORD=$(sed -n '2 p' ${UWO_CREDNTIALS})
 fi
 
 # check if DOWNLOADED_UID_LIST file exit or not
-if [ ! -f $DOWNLOADED_UID_LIST ]; then
-    dirname_temp=`dirname $DOWNLOADED_UID_LIST`
-    if [ ! -d $dirname_temp ]; then
-      echo $dirname_temp
-      mkdir -p $dirname_temp
+if [ -n "$DOWNLOADED_UID_LIST" ]; then
+    if [ ! -f "$DOWNLOADED_UID_LIST" ]; then
+        dirname_temp=`dirname "$DOWNLOADED_UID_LIST"`
+        if [ ! -d "$dirname_temp" ]; then
+          echo $dirname_temp
+          mkdir -p "$dirname_temp"
+        fi
+        touch "$DOWNLOADED_UID_LIST"
     fi
-    touch $DOWNLOADED_UID_LIST
 fi
 
 KEEP_SORTED_DICOM='False'
