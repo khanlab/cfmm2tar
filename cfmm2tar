@@ -26,6 +26,7 @@ function usage {
   echo "Usage: `basename $0` [optional options] <search options>  <output folder> "
   echo "                       "
   echo "    Optional options:  "
+  echo "        -l 'list_only_mode' (only write UIDs to file, don't download. Requires -U option)"
   echo "        -U 'path/to/downloaded_uid_list[default:no]'"
   echo "        -c 'path/to/uwo_credentials[default:~/.uwo_credentials]'"
   echo "        -t 'path/to/intermediate_dicoms_dir[default:<output folder>/cfmm2tar_intermediate_dicoms'"
@@ -45,6 +46,7 @@ function usage {
   echo "        Example (specific StudyInstanceUID): `basename $0` -u '12345.123456.123.1234567' myfolder"
   echo "	Example (specify downloaded_uid_list file): `basename $0` -U ~/downloaded_uid_list.txt -n '*subj01*'  myfolder"
   echo "	Example (specify intermediate dicoms dir): `basename $0` -t /scratch/\$USER/cfmm2tar_intermediate_dicoms -n '*subj01*'  myfolder"
+  echo "	Example (list-only mode - write UIDs without downloading): `basename $0` -l -U ~/uid_list.txt -p 'Khan^Project' myfolder"
 }
 
 execpath=`dirname $0`
@@ -60,16 +62,18 @@ STUDY_SEARCH=\'*\'
 NAME_SEARCH=\'*\'
 STUDYINSTANCEUID=\'*\'
 
+LIST_ONLY_MODE='False'
 DOWNLOADED_UID_LIST=
 UWO_CREDNTIALS=~/.uwo_credentials
 DICOMS_DIR=
 
-while getopts "d:n:p:u:U:c:t:s:x:" options; do
+while getopts "d:n:p:u:U:c:t:s:x:l" options; do
  case $options in
     d ) DATE_SEARCH=\'$OPTARG\';;
     n ) NAME_SEARCH=\'$OPTARG\';;
     p ) STUDY_SEARCH=\'$OPTARG\';;
     u ) STUDYINSTANCEUID=\'$OPTARG\';;
+    l ) LIST_ONLY_MODE='True';;
     U ) DOWNLOADED_UID_LIST=$OPTARG;;
     c ) UWO_CREDNTIALS=$OPTARG;;
     s ) DICOM_CONNECTION=$OPTARG;;
@@ -84,6 +88,14 @@ shift $((OPTIND-1))
 
 if [ "$#" -lt 1 ]
 then
+	usage
+	exit 1
+fi
+
+# Validate list-only mode requires -U option
+if [ "$LIST_ONLY_MODE" = 'True' ] && [ -z "$DOWNLOADED_UID_LIST" ]
+then
+	echo "Error: List-only mode (-l) requires -U option to specify output file for UIDs"
 	usage
 	exit 1
 fi
@@ -131,7 +143,9 @@ ${DATE_SEARCH} \
 ${NAME_SEARCH} \
 ${STUDYINSTANCEUID} \
 "${OTHER_OPTIONS}" \
-${DOWNLOADED_UID_LIST}
+${DOWNLOADED_UID_LIST} \
+'' \
+${LIST_ONLY_MODE}
 
 #clean-up after ourselves
 rmdir $DICOMS_DIR

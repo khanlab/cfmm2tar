@@ -81,7 +81,8 @@ def main(uwo_username,
          study_instance_uid,
          other_options,
          downloaded_uids_filename,
-         dcm4che_path):
+         dcm4che_path,
+         list_only_mode=False):
     '''
     main workflow: for each study: query,retrieve,tar
     '''
@@ -102,6 +103,30 @@ def main(uwo_username,
         StudyInstanceUIDs = list(set(cfmm_dcm4che_utils.get_StudyInstanceUID_by_matching_key(matching_key)))
     else:
         StudyInstanceUIDs = [study_instance_uid.replace('"', "",).replace("'", "")]
+
+    # If list-only mode, just write UIDs and exit
+    if list_only_mode:
+        logger.info('List-only mode: Writing {} UIDs to {}'.format(
+            len(StudyInstanceUIDs), downloaded_uids_filename))
+        
+        if downloaded_uids_filename:
+            # Read existing UIDs to avoid duplicates
+            existing_uids = []
+            if os.path.exists(downloaded_uids_filename):
+                with open(downloaded_uids_filename, 'r') as f:
+                    existing_uids = f.read().splitlines()
+            
+            # Write new UIDs
+            with open(downloaded_uids_filename, 'a') as f:
+                for uid in StudyInstanceUIDs:
+                    if uid not in existing_uids:
+                        f.write(uid + '\n')
+                        logger.info('Added UID: {}'.format(uid))
+                    else:
+                        logger.info('UID already in list: {}'.format(uid))
+        
+        logger.info('List-only mode complete. {} UIDs written.'.format(len(StudyInstanceUIDs)))
+        return
 
     # retrieve each study by StudyInstanceUID
     for index, StudyInstanceUID in enumerate(StudyInstanceUIDs):
@@ -185,7 +210,8 @@ if __name__ == "__main__":
                  study_instance_uid \
                  other_options \
                  [downloaded_uids_filename] \
-                 [dcm4che_path]")
+                 [dcm4che_path] \
+                 [list_only_mode]")
         sys.exit()
 
     else:
@@ -215,6 +241,11 @@ if __name__ == "__main__":
             # dcm4che installed on host or singularity container's PATH
             dcm4che_path = ''
 
+        if len(sys.argv) > 14:
+            list_only_mode = (sys.argv[14] == 'True')
+        else:
+            list_only_mode = False
+
         main(uwo_username,
              uwo_password,
              connect,
@@ -227,4 +258,5 @@ if __name__ == "__main__":
              study_instance_uid,
              other_options,
              downloaded_uids_filename,
-             dcm4che_path)
+             dcm4che_path,
+             list_only_mode)
