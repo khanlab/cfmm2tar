@@ -31,24 +31,24 @@ SINGULARITY_FILE=Singularity.v0.0.1i
 # test retrieve_cfmm_tar.py   
 ######
 test_small:
-	python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} ${PI} ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  ${SCAN_DATE} ${PATIENT_NAME} ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
+	python3 ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} ${PI} ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  ${SCAN_DATE} ${PATIENT_NAME} ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
 
 test_uids_file:
 	#re-run test_small, should see 'Skipping...'
-	python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} ${PI} ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  ${SCAN_DATE} ${PATIENT_NAME} ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
+	python3 ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} ${PI} ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  ${SCAN_DATE} ${PATIENT_NAME} ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
 
 test_multi_studies:
-	python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} ${PI} ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  ${MULTI_SCAN_DATE} ${PATIENT_NAME} ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
+	python3 ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} ${PI} ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  ${MULTI_SCAN_DATE} ${PATIENT_NAME} ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
 
 test_empty_dicom_folder:
 	#retrieved folder is empty
-	python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} '*' ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  20181015 '*' ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
+	python3 ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} '*' ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  20181015 '*' ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
 
 test_cmrr:
 	#PI='*'
 	#SCAN_DATE='*'
 	#PATIENT_NAME=2017_11_30_MS12
-	python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} '*' ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  '*' '2017_11_30_MS12' ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
+	python3 ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} '*' ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  '*' '2017_11_30_MS12' ${LIST_DOWNLOADED_UIDS} ${DCM4CHE_PATH}
 
 
 # test data: tissue 9.4T missing ProtocolName and SeriesDescption tag,wich causing error when run tar2bids(heudiconv)
@@ -57,7 +57,7 @@ test_cmrr:
 # date: 20180626
 # studyinstanceuid:2.16.756.5.5.100.8323328.90914.1530020752.11
 test_cmrr2tar_insert_tag:
-		python ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} '*' ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  '*' '20180626' ${LIST_DOWNLOADED_UIDS}
+		python3 ../retrieve_cfmm_tar.py ${USERNAME} ${PASSWORD} ${CONNECT} '*' ${SORTED_DEST_DIR} ${KEEP_SORTED_DICOM_FLAG} ${TGZ_DEST_DIR}  '*' '20180626' ${LIST_DOWNLOADED_UIDS}
 
 ######
 # test cfmm2tar
