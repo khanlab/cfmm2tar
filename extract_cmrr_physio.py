@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 '''
 unwrap convert SIEMENS physio MR dicom. re-implement https://github.com/CMRR-C2P/MB extractCMRRPhysio.m in pyton
@@ -95,7 +95,7 @@ def extract_cmrr_physio(filename, output_path):
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
-        print 'Usage: python extract_cmrr_physio.py dicom_filename output_path'
+        print('Usage: python extract_cmrr_physio.py dicom_filename output_path')
         sys.exit(1)
 
     filename = sys.argv[1]

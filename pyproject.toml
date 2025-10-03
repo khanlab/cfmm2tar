@@ -1,0 +1,25 @@
+[project]
+name = "cfmm2tar"
+version = "0.0.3"
+description = "Download a tarballed DICOM dataset from the CFMM DICOM server"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "YingLi Lu", email = "yinglilu@gmail.com" },
+    { name = "Ali Khan" },
+]
+maintainers = [
+    { name = "isolove", email = "isolove@uwo.ca" },
+]
+
+dependencies = [
+    "pydicom>=2.4.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = []

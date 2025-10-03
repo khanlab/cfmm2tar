@@ -1,4 +1,4 @@
-FROM ubuntu:bionic
+FROM ubuntu:22.04
 LABEL author=yinglilu@gmail.com
 LABEL maintainer=isolove@uwo.ca
 LABEL version=0.0.3
@@ -14,11 +14,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends apt-utils \
     curl \
     zip \
     unzip \
-    python2.7 \
-    python-pip \
+    python3 \
+    python3-pip \
     rsync \
     openssh-client
-RUN pip install --upgrade pip && pip install --upgrade setuptools
+
+# Install uv for dependency management
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.cargo/bin:$PATH"
 
 # dcm4che requires JRE
 # enable TLSv1.1 for dcm4chee v2
@@ -30,8 +33,14 @@ COPY *.py /apps/cfmm2tar/
 #for some unknown reason, need change the mode:
 RUN chmod a+x /apps/cfmm2tar/*.py
 
+# Copy pyproject.toml for dependency installation
+COPY pyproject.toml /apps/cfmm2tar/
+
+# Install Python dependencies using uv
+RUN cd /apps/cfmm2tar && uv pip install --system -e .
+
 #dicomunwrap, will install pydicom
-RUN cd /apps && git clone https://gitlab.com/cfmm/DicomRaw && cd DicomRaw && pip install -r requirements.txt
+RUN cd /apps && git clone https://gitlab.com/cfmm/DicomRaw && cd DicomRaw && uv pip install --system -r requirements.txt
 
 COPY *.sh /src/
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''
 Define a Dcm4cheUtils class, which can get StudyInstanceUID by matching key, retrieve dicom files to a destination directory.
 
@@ -17,7 +17,7 @@ import logging
 import time
 
 # for quote python strings for safe use in posix shells
-import pipes
+import shlex
 
 
 class Dcm4cheUtils():
@@ -38,8 +38,8 @@ class Dcm4cheUtils():
             ' --connect {}'.format(self.connect) +\
             ' --accept-timeout 10000 ' +\
             ' {} '.format(other_options) +\
-            ''' --user {} '''.format(pipes.quote(self.username)) +\
-            ''' --user-pass {} '''.format(pipes.quote(self.password))
+            ''' --user {} '''.format(shlex.quote(self.username)) +\
+            ''' --user-pass {} '''.format(shlex.quote(self.password))
 
         self._getscu_str = \
             '''{} getscu'''.format(self.dcm4che_path) +\
@@ -47,8 +47,8 @@ class Dcm4cheUtils():
             ' --connect {} '.format(self.connect) +\
             ' --accept-timeout 10000 ' + \
             ' {} '.format(other_options) + \
-            ''' --user {} '''.format(pipes.quote(self.username)) +\
-            ''' --user-pass {} '''.format(pipes.quote(self.password))
+            ''' --user {} '''.format(shlex.quote(self.username)) +\
+            ''' --user-pass {} '''.format(shlex.quote(self.password))
 
     def _get_stdout_stderr_returncode(self, cmd):
         """

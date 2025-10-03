@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''
 Define a DicomSorter class, which can decompress, sort dicom files, and tar the sorted files, to a destination directory.
 
