@@ -26,7 +26,7 @@ function usage {
   echo "Usage: `basename $0` [optional options] <search options>  <output folder> "
   echo "                       "
   echo "    Optional options:  "
-  echo "        -l 'list_only_mode' (only write UIDs to file, don't download. Requires -U option)"
+  echo "        -l 'list_only_mode' (only write UIDs to TSV file, don't download. Requires -U option)"
   echo "        -U 'path/to/downloaded_uid_list[default:no]'"
   echo "        -c 'path/to/uwo_credentials[default:~/.uwo_credentials]'"
   echo "        -t 'path/to/intermediate_dicoms_dir[default:<output folder>/cfmm2tar_intermediate_dicoms'"
@@ -46,7 +46,7 @@ function usage {
   echo "        Example (specific StudyInstanceUID): `basename $0` -u '12345.123456.123.1234567' myfolder"
   echo "	Example (specify downloaded_uid_list file): `basename $0` -U ~/downloaded_uid_list.txt -n '*subj01*'  myfolder"
   echo "	Example (specify intermediate dicoms dir): `basename $0` -t /scratch/\$USER/cfmm2tar_intermediate_dicoms -n '*subj01*'  myfolder"
-  echo "	Example (list-only mode - write UIDs without downloading): `basename $0` -l -U ~/uid_list.txt -p 'Khan^Project' myfolder"
+  echo "	Example (list-only mode - write UIDs with metadata to TSV): `basename $0` -l -U ~/uid_list.tsv -p 'Khan^Project' myfolder"
 }
 
 execpath=`dirname $0`

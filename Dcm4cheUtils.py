@@ -157,6 +157,98 @@ class Dcm4cheUtils():
 
         return StudyInstanceUID_list
 
+    def get_study_metadata_by_matching_key(self, matching_key):
+        '''
+        find study metadata (UID, PatientName, StudyDate, StudyDescription, PatientID, StudyID) by matching key
+
+        input:
+            matching_key:
+              example: -m StudyDescription='Khan*' -m StudyDate='20171116'
+        output:
+            list of dicts, each containing:
+                {
+                    'StudyInstanceUID': '1.2.3...',
+                    'PatientName': 'Patient^Name',
+                    'StudyDate': '20180803',
+                    'StudyDescription': 'PI^Project',
+                    'PatientID': 'ID123',
+                    'StudyID': 'Study1'
+                }
+        '''
+
+        # Query for multiple DICOM tags
+        cmd = self._findscu_str +\
+            ''' {} '''.format(matching_key) +\
+            ' -r StudyInstanceUID' +\
+            ' -r PatientName' +\
+            ' -r StudyDate' +\
+            ' -r StudyDescription' +\
+            ' -r PatientID' +\
+            ' -r StudyID'
+
+        out, err, return_code = self._get_stdout_stderr_returncode(cmd)
+
+        # local dcm4che
+        if err:
+            # no output of the annonying docker dcm4che's java info
+            if err != 'Picked up _JAVA_OPTIONS: -Xmx2048m\n':
+                self.logger.error(err)
+
+        # Parse the output to extract metadata
+        # Output format from findscu typically shows each attribute on a line like:
+        # (0020,000D) UI [1.2.3.4.5] StudyInstanceUID
+        # (0010,0010) PN [Patient^Name] PatientName
+        
+        studies = []
+        current_study = {}
+        
+        for line in out.splitlines():
+            if not line.strip():
+                # Empty line might indicate end of a study record
+                if current_study:
+                    studies.append(current_study)
+                    current_study = {}
+                continue
+            
+            # Parse DICOM attribute lines
+            if '0020,000D' in line and 'StudyInstanceUID' in line:
+                # Extract value between brackets
+                import re
+                match = re.search(r'\[(.*?)\]', line)
+                if match:
+                    current_study['StudyInstanceUID'] = match.group(1)
+            elif '0010,0010' in line and 'PatientName' in line:
+                import re
+                match = re.search(r'\[(.*?)\]', line)
+                if match:
+                    current_study['PatientName'] = match.group(1)
+            elif '0008,0020' in line and 'StudyDate' in line:
+                import re
+                match = re.search(r'\[(.*?)\]', line)
+                if match:
+                    current_study['StudyDate'] = match.group(1)
+            elif '0008,1030' in line and 'StudyDescription' in line:
+                import re
+                match = re.search(r'\[(.*?)\]', line)
+                if match:
+                    current_study['StudyDescription'] = match.group(1)
+            elif '0010,0020' in line and 'PatientID' in line:
+                import re
+                match = re.search(r'\[(.*?)\]', line)
+                if match:
+                    current_study['PatientID'] = match.group(1)
+            elif '0020,0010' in line and 'StudyID' in line:
+                import re
+                match = re.search(r'\[(.*?)\]', line)
+                if match:
+                    current_study['StudyID'] = match.group(1)
+        
+        # Don't forget the last study if there's no trailing empty line
+        if current_study:
+            studies.append(current_study)
+        
+        return studies
+
     def get_all_pi_names(self):
         """Find all PIs the user has access to (by StudyDescription).
 

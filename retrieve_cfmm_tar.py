@@ -101,31 +101,71 @@ def main(uwo_username,
 
         # get all StudyInstanceUIDs (dropping duplicates)
         StudyInstanceUIDs = list(set(cfmm_dcm4che_utils.get_StudyInstanceUID_by_matching_key(matching_key)))
+        
+        # For list-only mode, also get full metadata
+        if list_only_mode:
+            study_metadata_list = cfmm_dcm4che_utils.get_study_metadata_by_matching_key(matching_key)
+        else:
+            study_metadata_list = None
     else:
         StudyInstanceUIDs = [study_instance_uid.replace('"', "",).replace("'", "")]
+        study_metadata_list = None
 
-    # If list-only mode, just write UIDs and exit
+    # If list-only mode, just write UIDs and metadata to TSV and exit
     if list_only_mode:
-        logger.info('List-only mode: Writing {} UIDs to {}'.format(
-            len(StudyInstanceUIDs), downloaded_uids_filename))
+        logger.info('List-only mode: Writing {} studies to {}'.format(
+            len(StudyInstanceUIDs) if not study_metadata_list else len(study_metadata_list), 
+            downloaded_uids_filename))
         
         if downloaded_uids_filename:
-            # Read existing UIDs to avoid duplicates
-            existing_uids = []
-            if os.path.exists(downloaded_uids_filename):
-                with open(downloaded_uids_filename, 'r') as f:
-                    existing_uids = f.read().splitlines()
+            # Read existing file to avoid duplicates
+            existing_uids = set()
+            file_exists = os.path.exists(downloaded_uids_filename)
             
-            # Write new UIDs
+            if file_exists:
+                with open(downloaded_uids_filename, 'r') as f:
+                    # Skip header if it exists
+                    lines = f.readlines()
+                    if lines and lines[0].startswith('StudyInstanceUID'):
+                        lines = lines[1:]
+                    for line in lines:
+                        parts = line.strip().split('\t')
+                        if parts:
+                            existing_uids.add(parts[0])
+            
+            # Write new studies in TSV format
             with open(downloaded_uids_filename, 'a') as f:
-                for uid in StudyInstanceUIDs:
-                    if uid not in existing_uids:
-                        f.write(uid + '\n')
-                        logger.info('Added UID: {}'.format(uid))
-                    else:
-                        logger.info('UID already in list: {}'.format(uid))
+                # Write header if file is new or empty
+                if not file_exists or os.path.getsize(downloaded_uids_filename) == 0:
+                    f.write('StudyInstanceUID\tPatientName\tStudyDate\tStudyDescription\tPatientID\tStudyID\n')
+                
+                # If we have full metadata, use it
+                if study_metadata_list:
+                    for study in study_metadata_list:
+                        uid = study.get('StudyInstanceUID', '')
+                        if uid and uid not in existing_uids:
+                            patient_name = study.get('PatientName', '')
+                            study_date = study.get('StudyDate', '')
+                            study_desc = study.get('StudyDescription', '')
+                            patient_id = study.get('PatientID', '')
+                            study_id = study.get('StudyID', '')
+                            
+                            f.write('{}\t{}\t{}\t{}\t{}\t{}\n'.format(
+                                uid, patient_name, study_date, study_desc, patient_id, study_id))
+                            logger.info('Added study: {} - {} - {}'.format(uid, patient_name, study_date))
+                        elif uid:
+                            logger.info('Study already in list: {}'.format(uid))
+                else:
+                    # Fallback: write only UIDs (when using -u option for specific UID)
+                    for uid in StudyInstanceUIDs:
+                        if uid not in existing_uids:
+                            f.write('{}\t\t\t\t\t\n'.format(uid))
+                            logger.info('Added UID: {}'.format(uid))
+                        else:
+                            logger.info('UID already in list: {}'.format(uid))
         
-        logger.info('List-only mode complete. {} UIDs written.'.format(len(StudyInstanceUIDs)))
+        logger.info('List-only mode complete. {} studies written.'.format(
+            len(StudyInstanceUIDs) if not study_metadata_list else len(study_metadata_list)))
         return
 
     # retrieve each study by StudyInstanceUID
@@ -134,8 +174,20 @@ def main(uwo_username,
         downloaded_uids = []
         if downloaded_uids_filename:
             with open(downloaded_uids_filename, 'r') as f:
-                # downloaded_uids=f.read().replace('\n', ' ')
-                downloaded_uids = f.read().splitlines()
+                lines = f.readlines()
+                # Handle both TSV format (new) and plain text format (old)
+                for line in lines:
+                    line = line.strip()
+                    if not line or line.startswith('StudyInstanceUID'):
+                        # Skip empty lines and header
+                        continue
+                    # For TSV format, extract first column (UID)
+                    if '\t' in line:
+                        uid = line.split('\t')[0]
+                        downloaded_uids.append(uid)
+                    else:
+                        # Plain text format (backward compatibility)
+                        downloaded_uids.append(line)
 
         # check if StudyInstanceUID has been downloaded
         if StudyInstanceUID in downloaded_uids:
@@ -186,8 +238,27 @@ def main(uwo_username,
 
         # update downloaded_uids_filename
         if downloaded_uids_filename:
+            # Check if file exists and has header
+            file_exists = os.path.exists(downloaded_uids_filename)
+            has_header = False
+            
+            if file_exists:
+                with open(downloaded_uids_filename, 'r') as f:
+                    first_line = f.readline()
+                    if first_line.startswith('StudyInstanceUID'):
+                        has_header = True
+            
             with open(downloaded_uids_filename, 'a') as f:
-                f.write(StudyInstanceUID+'\n')
+                # If file doesn't exist or is empty, write header
+                if not file_exists or (file_exists and os.path.getsize(downloaded_uids_filename) == 0):
+                    f.write('StudyInstanceUID\tPatientName\tStudyDate\tStudyDescription\tPatientID\tStudyID\n')
+                
+                # Write UID in TSV format (empty fields for metadata as we don't have it during download)
+                if has_header or not file_exists:
+                    f.write(StudyInstanceUID+'\t\t\t\t\t\n')
+                else:
+                    # Old format - just UID
+                    f.write(StudyInstanceUID+'\n')
 
         #  remove retrieved dir
         if not keep_sorted_dest_dir_flag:

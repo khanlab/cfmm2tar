@@ -41,21 +41,29 @@ docker run -i -t --rm --volume ${OUTPUT_DIR}:/data cfmm2tar -p 'Everling^Marmose
 
 ### List-only mode
 
-You can first query and save StudyInstanceUIDs to a file without downloading the data. This is useful for:
+You can first query and save StudyInstanceUIDs to a file without downloading the data. The output is a TSV (tab-separated values) file with columns for StudyInstanceUID, PatientName, StudyDate, StudyDescription, PatientID, and StudyID. This is useful for:
 - Planning large downloads
 - Reviewing what studies are available before downloading
 - Creating a download queue for later processing
+- Filtering studies based on patient name, date, or other metadata
 
 ```bash
-# Query and save UIDs to a file
-docker run -i -t --rm --volume ${OUTPUT_DIR}:/data cfmm2tar -l -U /data/uid_list.txt -p 'Khan^Project' -d '20180803' /data
+# Query and save study metadata to a TSV file
+docker run -i -t --rm --volume ${OUTPUT_DIR}:/data cfmm2tar -l -U /data/uid_list.tsv -p 'Khan^Project' -d '20180803' /data
+```
+
+The output TSV file will look like:
+```
+StudyInstanceUID	PatientName	StudyDate	StudyDescription	PatientID	StudyID
+1.2.3.4.5.6...	Patient^Name	20180803	Khan^Project	P001	S001
+...
 ```
 
 Later, use the UID file to download only the studies you need:
 
 ```bash
 # Download studies from the UID list
-docker run -i -t --rm --volume ${OUTPUT_DIR}:/data cfmm2tar -U /data/uid_list.txt /data
+docker run -i -t --rm --volume ${OUTPUT_DIR}:/data cfmm2tar -U /data/uid_list.tsv /data
 ```
 
 The `-U` option tracks downloaded studies, so you can safely re-run the command and it will skip already downloaded studies.
