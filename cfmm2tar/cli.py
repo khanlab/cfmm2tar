@@ -59,6 +59,12 @@ Examples:
   %(prog)s -U ~/downloaded_uid_list.txt -n '*subj01*' myfolder
       Specify downloaded_uid_list file
   
+  %(prog)s -M study_metadata.tsv -p 'Khan^NeuroAnalytics' -d '20170530'
+      Query and write study metadata to TSV file (no download)
+  
+  %(prog)s --uid-from-file study_metadata.tsv myfolder
+      Download studies using UIDs from metadata file
+  
   %(prog)s -t /scratch/$USER/cfmm2tar_intermediate_dicoms -n '*subj01*' myfolder
       Specify intermediate dicoms dir
         """
@@ -68,6 +74,12 @@ Examples:
     parser.add_argument('-U', '--downloaded-uid-list', dest='downloaded_uid_list',
                         default='',
                         help='Path to downloaded_uid_list file (default: no tracking)')
+    parser.add_argument('-M', '--metadata-file', dest='metadata_file',
+                        default='',
+                        help='Path to metadata TSV file. If specified, only query and write metadata (no download). Can later use with --uid-from-file to download.')
+    parser.add_argument('--uid-from-file', dest='uid_from_file',
+                        default='',
+                        help='Path to file containing StudyInstanceUIDs to download (one per line or TSV with StudyInstanceUID column)')
     parser.add_argument('-c', '--credentials', dest='credentials_file',
                         default=os.path.expanduser('~/.uwo_credentials'),
                         help='Path to uwo_credentials file (default: ~/.uwo_credentials)')
@@ -105,6 +117,87 @@ Examples:
     
     args = parser.parse_args()
     
+    # Handle metadata-only mode (query and write to TSV, no download)
+    if args.metadata_file:
+        # We'll need credentials for query even in metadata mode
+        username, password = read_credentials(args.credentials_file)
+        
+        if username is None or password is None:
+            username = input("UWO Username: ")
+            password = getpass.getpass("UWO Password: ")
+        
+        # Import here to access Dcm4cheUtils
+        from cfmm2tar import Dcm4cheUtils
+        
+        # Create dcm4che utils instance
+        dcm4che_path = f'apptainer exec {args.dcm4che_container}' if args.dcm4che_container else ''
+        cfmm_dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
+            args.dicom_connection, username, password, dcm4che_path, args.other_options)
+        
+        # Build matching key
+        matching_key = "-m StudyDescription='{}' -m StudyDate='{}' -m PatientName='{}'".format(
+            args.study_search, args.date_search, args.name_search
+        )
+        
+        # Get study metadata
+        print(f"Querying study metadata with search criteria:")
+        print(f"  Principal^Project: {args.study_search}")
+        print(f"  Date: {args.date_search}")
+        print(f"  PatientName: {args.name_search}")
+        
+        studies = cfmm_dcm4che_utils.get_study_metadata_by_matching_key(matching_key)
+        
+        if not studies:
+            print("No studies found matching the search criteria.")
+            sys.exit(0)
+        
+        print(f"Found {len(studies)} studies")
+        
+        # Write to TSV file
+        import csv
+        with open(args.metadata_file, 'w', newline='') as f:
+            fieldnames = ['StudyInstanceUID', 'PatientName', 'PatientID', 'StudyDate', 'StudyDescription']
+            writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter='\t')
+            writer.writeheader()
+            for study in studies:
+                writer.writerow(study)
+        
+        print(f"Study metadata written to: {args.metadata_file}")
+        print(f"\nTo download these studies later, use:")
+        print(f"  cfmm2tar --uid-from-file {args.metadata_file} <output_dir>")
+        sys.exit(0)
+    
+    # Handle uid-from-file mode (download specific UIDs from file)
+    study_instance_uid = args.study_instance_uid
+    if args.uid_from_file:
+        # Read UIDs from file
+        uids = []
+        with open(args.uid_from_file, 'r') as f:
+            lines = f.readlines()
+            
+        # Check if it's a TSV with header
+        if lines and '\t' in lines[0]:
+            # TSV format - look for StudyInstanceUID column
+            import csv
+            reader = csv.DictReader(lines, delimiter='\t')
+            for row in reader:
+                if 'StudyInstanceUID' in row:
+                    uid = row['StudyInstanceUID'].strip()
+                    if uid:
+                        uids.append(uid)
+        else:
+            # Simple text file, one UID per line
+            for line in lines:
+                uid = line.strip()
+                if uid:
+                    uids.append(uid)
+        
+        if not uids:
+            print(f"No StudyInstanceUIDs found in {args.uid_from_file}")
+            sys.exit(1)
+        
+        print(f"Will download {len(uids)} studies from {args.uid_from_file}")
+    
     # Read or prompt for credentials
     username, password = read_credentials(args.credentials_file)
     
@@ -136,21 +229,42 @@ Examples:
     keep_sorted_dicom = False
    
     try:
-        retrieve_cfmm_tar.main(
-            uwo_username=username,
-            uwo_password=password,
-            connect=args.dicom_connection,
-            PI_matching_key=args.study_search,
-            retrieve_dest_dir=intermediate_dir,
-            keep_sorted_dest_dir_flag=keep_sorted_dicom,
-            tar_dest_dir=output_dir,
-            study_date=args.date_search,
-            patient_name=args.name_search,
-            study_instance_uid=args.study_instance_uid,
-            other_options=args.other_options,
-            downloaded_uids_filename=downloaded_uid_list,
-            dcm4che_path=f'apptainer exec {args.dcm4che_container}',
-        )
+        if args.uid_from_file:
+            # Download each UID from the file
+            for i, uid in enumerate(uids):
+                print(f"\nDownloading study {i+1}/{len(uids)}: {uid}")
+                retrieve_cfmm_tar.main(
+                    uwo_username=username,
+                    uwo_password=password,
+                    connect=args.dicom_connection,
+                    PI_matching_key=args.study_search,
+                    retrieve_dest_dir=intermediate_dir,
+                    keep_sorted_dest_dir_flag=keep_sorted_dicom,
+                    tar_dest_dir=output_dir,
+                    study_date=args.date_search,
+                    patient_name=args.name_search,
+                    study_instance_uid=uid,
+                    other_options=args.other_options,
+                    downloaded_uids_filename=downloaded_uid_list,
+                    dcm4che_path=f'apptainer exec {args.dcm4che_container}',
+                )
+        else:
+            # Normal mode - use search criteria
+            retrieve_cfmm_tar.main(
+                uwo_username=username,
+                uwo_password=password,
+                connect=args.dicom_connection,
+                PI_matching_key=args.study_search,
+                retrieve_dest_dir=intermediate_dir,
+                keep_sorted_dest_dir_flag=keep_sorted_dicom,
+                tar_dest_dir=output_dir,
+                study_date=args.date_search,
+                patient_name=args.name_search,
+                study_instance_uid=study_instance_uid,
+                other_options=args.other_options,
+                downloaded_uids_filename=downloaded_uid_list,
+                dcm4che_path=f'apptainer exec {args.dcm4che_container}',
+            )
         
         # Clean up intermediate directory if empty
         try:

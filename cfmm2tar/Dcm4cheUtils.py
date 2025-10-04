@@ -156,6 +156,93 @@ class Dcm4cheUtils():
 
         return StudyInstanceUID_list
 
+    def get_study_metadata_by_matching_key(self, matching_key):
+        '''
+        Get study metadata (UIDs and other study info) by matching key
+
+        input:
+            matching_key:
+              example: -m StudyDescription='Khan*' -m StudyDate='20171116'
+        output:
+            list of dicts, each containing:
+                [{'StudyInstanceUID': '...', 
+                  'PatientName': '...', 
+                  'StudyDate': '...',
+                  'StudyDescription': '...',
+                  'PatientID': '...'},
+                 ...]
+        '''
+        import re
+        
+        # Request multiple DICOM tags in the query
+        cmd = self._findscu_str +\
+            ''' {} '''.format(matching_key) +\
+            ' -r StudyInstanceUID' +\
+            ' -r PatientName' +\
+            ' -r StudyDate' +\
+            ' -r StudyDescription' +\
+            ' -r PatientID' +\
+            ' -X'  # XML output for easier parsing
+        
+        out, err, return_code = self._get_stdout_stderr_returncode(cmd)
+        
+        if err and err != b'Picked up _JAVA_OPTIONS: -Xmx2048m\n' and err != 'Picked up _JAVA_OPTIONS: -Xmx2048m\n':
+            self.logger.error(err)
+        
+        # Parse the XML output
+        studies = []
+        try:
+            import xml.etree.ElementTree as ET
+            
+            # Split output by study boundaries (each study starts with <?xml)
+            xml_strings = out.decode('UTF-8').split('<?xml')
+            
+            for xml_str in xml_strings:
+                if not xml_str.strip():
+                    continue
+                    
+                # Re-add the XML declaration
+                xml_str = '<?xml' + xml_str
+                
+                try:
+                    root = ET.fromstring(xml_str)
+                    study = {}
+                    
+                    # Extract DICOM attributes
+                    for attr in root.findall('.//DicomAttribute'):
+                        tag = attr.get('tag')
+                        keyword = attr.get('keyword')
+                        value_elem = attr.find('Value')
+                        
+                        if value_elem is not None and value_elem.text:
+                            if keyword == 'StudyInstanceUID':
+                                study['StudyInstanceUID'] = value_elem.text.strip()
+                            elif keyword == 'PatientName':
+                                study['PatientName'] = value_elem.text.strip()
+                            elif keyword == 'StudyDate':
+                                study['StudyDate'] = value_elem.text.strip()
+                            elif keyword == 'StudyDescription':
+                                study['StudyDescription'] = value_elem.text.strip()
+                            elif keyword == 'PatientID':
+                                study['PatientID'] = value_elem.text.strip()
+                    
+                    # Only add if we have at least a StudyInstanceUID
+                    if 'StudyInstanceUID' in study:
+                        # Fill in missing fields with empty strings
+                        for field in ['PatientName', 'StudyDate', 'StudyDescription', 'PatientID']:
+                            if field not in study:
+                                study[field] = ''
+                        studies.append(study)
+                        
+                except ET.ParseError as e:
+                    self.logger.debug(f"Failed to parse XML chunk: {e}")
+                    continue
+                    
+        except Exception as e:
+            self.logger.error(f"Error parsing study metadata: {e}")
+            
+        return studies
+
     def get_all_pi_names(self):
         """Find all PIs the user has access to (by StudyDescription).
 
