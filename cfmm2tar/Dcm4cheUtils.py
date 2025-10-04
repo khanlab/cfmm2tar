@@ -156,6 +156,99 @@ class Dcm4cheUtils():
 
         return StudyInstanceUID_list
 
+    def get_study_metadata_by_matching_key(self, matching_key):
+        '''
+        Get study metadata (UIDs and other study info) by matching key
+
+        input:
+            matching_key:
+              example: -m StudyDescription='Khan*' -m StudyDate='20171116'
+        output:
+            list of dicts, each containing:
+                [{'StudyInstanceUID': '...', 
+                  'PatientName': '...', 
+                  'StudyDate': '...',
+                  'StudyDescription': '...',
+                  'PatientID': '...'},
+                 ...]
+        '''
+        import re
+        
+        # Request multiple DICOM tags in the query
+        # Note: Not using -X flag as it doesn't produce XML in all versions
+        # Instead, parse the debug output which is more reliable
+        cmd = self._findscu_str +\
+            ''' {} '''.format(matching_key) +\
+            ' -r StudyInstanceUID' +\
+            ' -r PatientName' +\
+            ' -r StudyDate' +\
+            ' -r StudyDescription' +\
+            ' -r PatientID'
+        
+        out, err, return_code = self._get_stdout_stderr_returncode(cmd)
+        
+        if err and err != b'Picked up _JAVA_OPTIONS: -Xmx2048m\n' and err != 'Picked up _JAVA_OPTIONS: -Xmx2048m\n':
+            self.logger.error(err)
+        
+        # Parse the debug output (similar to grep/cut approach used elsewhere)
+        studies = []
+        try:
+            current_study = {}
+            in_response = False  # Track if we're in a C-FIND-RSP section
+            
+            lines = out.decode('UTF-8').split('\n')
+            
+            for line in lines:
+                # Track when we enter/exit response sections
+                # Only parse DICOM tags from C-FIND-RSP (responses), not C-FIND-RQ (requests)
+                if 'C-FIND-RSP Dataset:' in line:
+                    in_response = True
+                    continue
+                elif 'C-FIND-RQ' in line or 'C-FIND-RSP[' in line:
+                    in_response = False
+                    continue
+                
+                # Only process DICOM tags if we're in a response section
+                if not in_response:
+                    continue
+                    
+                # Look for lines with DICOM tags in format: (xxxx,xxxx) VR [value] Description
+                # Example: (0020,000D) UI [1.3.12.2.1107...] StudyInstanceUID
+                match = re.match(r'\(([0-9A-Fa-f]{4}),([0-9A-Fa-f]{4})\)\s+\w+\s+\[([^\]]*)\]\s+(.+)', line)
+                if match:
+                    tag = f"{match.group(1)},{match.group(2)}"
+                    value = match.group(3).strip()
+                    keyword = match.group(4).strip()
+                    
+                    # Map DICOM tags to our field names
+                    # StudyInstanceUID comes last and marks the end of a study
+                    if tag == '0020,000D':  # StudyInstanceUID
+                        current_study['StudyInstanceUID'] = value
+                        # Save this complete study only if it has a valid StudyInstanceUID
+                        if 'StudyInstanceUID' in current_study and current_study['StudyInstanceUID']:
+                            studies.append(current_study)
+                        # Start fresh for next study
+                        current_study = {}
+                    elif tag == '0010,0010':  # PatientName
+                        current_study['PatientName'] = value
+                    elif tag == '0010,0020':  # PatientID
+                        current_study['PatientID'] = value
+                    elif tag == '0008,0020':  # StudyDate
+                        current_study['StudyDate'] = value
+                    elif tag == '0008,1030':  # StudyDescription
+                        current_study['StudyDescription'] = value
+            
+            # Fill in missing fields with empty strings
+            for study in studies:
+                for field in ['PatientName', 'PatientID', 'StudyDate', 'StudyDescription']:
+                    if field not in study:
+                        study[field] = ''
+                        
+        except Exception as e:
+            self.logger.error(f"Error parsing study metadata: {e}")
+            
+        return studies
+
     def get_all_pi_names(self):
         """Find all PIs the user has access to (by StudyDescription).
 

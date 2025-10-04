@@ -81,7 +81,8 @@ def main(uwo_username,
          study_instance_uid,
          other_options,
          downloaded_uids_filename,
-         dcm4che_path):
+         dcm4che_path,
+         metadata_tsv_filename=''):
     '''
     main workflow: for each study: query,retrieve,tar
     '''
@@ -128,6 +129,32 @@ def main(uwo_username,
 
         logger.info('retrieved dicoms to {}'.format(retrieved_dicom_dir))
 
+        # Extract metadata from the first DICOM file for TSV export
+        study_metadata = {}
+        if metadata_tsv_filename:
+            try:
+                # Walk through retrieved directory to find a DICOM file
+                for root, dirs, filenames in os.walk(retrieved_dicom_dir):
+                    for filename in filenames:
+                        full_filename = os.path.join(root, filename)
+                        try:
+                            ds = pydicom.dcmread(full_filename, stop_before_pixels=True)
+                            # Extract metadata
+                            study_metadata = {
+                                'StudyInstanceUID': str(ds.get('StudyInstanceUID', StudyInstanceUID)),
+                                'PatientName': str(ds.get('PatientName', '')),
+                                'PatientID': str(ds.get('PatientID', '')),
+                                'StudyDate': str(ds.get('StudyDate', '')),
+                                'StudyDescription': str(ds.get('StudyDescription', ''))
+                            }
+                            break  # Found metadata, exit inner loop
+                        except:
+                            continue  # Not a DICOM file, try next
+                    if study_metadata:
+                        break  # Found metadata, exit outer loop
+            except Exception as e:
+                logger.warning(f"Could not extract metadata from DICOM files: {e}")
+
         # insert ProtocolName and SeriesDescription tag
         # some cfmm 9.4T data missing these two tags, which cause error when run tar2bids(heudiconv)
         insert_tag(retrieved_dicom_dir)
@@ -158,6 +185,27 @@ def main(uwo_username,
                 f.write(StudyInstanceUID+'\n')
 
             logger.info("uid file created: {}".format(uid_full_filename))
+
+        # Write metadata to TSV file if specified
+        if metadata_tsv_filename and study_metadata:
+            import csv
+            # Add tar file path to metadata
+            study_metadata['TarFilePath'] = tar_full_filename
+            
+            # Check if file exists to determine if we need to write header
+            file_exists = os.path.exists(metadata_tsv_filename)
+            
+            with open(metadata_tsv_filename, 'a', newline='') as f:
+                fieldnames = ['StudyInstanceUID', 'PatientName', 'PatientID', 'StudyDate', 'StudyDescription', 'TarFilePath']
+                writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter='\t')
+                
+                # Write header if file is new
+                if not file_exists:
+                    writer.writeheader()
+                
+                writer.writerow(study_metadata)
+            
+            logger.info("metadata written to: {}".format(metadata_tsv_filename))
 
         # update downloaded_uids_filename
         if downloaded_uids_filename:
