@@ -175,73 +175,61 @@ class Dcm4cheUtils():
         import re
         
         # Request multiple DICOM tags in the query
+        # Note: Not using -X flag as it doesn't produce XML in all versions
+        # Instead, parse the debug output which is more reliable
         cmd = self._findscu_str +\
             ''' {} '''.format(matching_key) +\
             ' -r StudyInstanceUID' +\
             ' -r PatientName' +\
             ' -r StudyDate' +\
             ' -r StudyDescription' +\
-            ' -r PatientID' +\
-            ' -X'  # XML output for easier parsing
+            ' -r PatientID'
         
         out, err, return_code = self._get_stdout_stderr_returncode(cmd)
         
         if err and err != b'Picked up _JAVA_OPTIONS: -Xmx2048m\n' and err != 'Picked up _JAVA_OPTIONS: -Xmx2048m\n':
             self.logger.error(err)
         
-        # Parse the XML output
+        # Parse the debug output (similar to grep/cut approach used elsewhere)
         studies = []
         try:
-            import xml.etree.ElementTree as ET
-            import re
+            current_study = {}
             
-            # Find all complete XML documents in the output using regex
-            # Look for <?xml...?> declarations followed by their content
-            output_text = out.decode('UTF-8')
+            lines = out.decode('UTF-8').split('\n')
             
-            # Match XML documents: <?xml...?> followed by content up to </NativeDicomModel>
-            xml_pattern = r'(<\?xml[^?]*\?>\s*<NativeDicomModel[^>]*>.*?</NativeDicomModel>)'
-            xml_matches = re.findall(xml_pattern, output_text, re.DOTALL)
-            
-            for xml_str in xml_matches:
-                if not xml_str.strip():
-                    continue
-                
-                try:
-                    root = ET.fromstring(xml_str)
-                    study = {}
+            for line in lines:
+                # Look for lines with DICOM tags in format: (xxxx,xxxx) VR [value] Description
+                # Example: (0020,000D) UI [1.3.12.2.1107...] StudyInstanceUID
+                match = re.match(r'\(([0-9A-Fa-f]{4}),([0-9A-Fa-f]{4})\)\s+\w+\s+\[([^\]]*)\]\s+(.+)', line)
+                if match:
+                    tag = f"{match.group(1)},{match.group(2)}"
+                    value = match.group(3).strip()
+                    keyword = match.group(4).strip()
                     
-                    # Extract DICOM attributes
-                    for attr in root.findall('.//DicomAttribute'):
-                        tag = attr.get('tag')
-                        keyword = attr.get('keyword')
-                        value_elem = attr.find('Value')
+                    # Map DICOM tags to our field names
+                    # StudyInstanceUID comes last and marks the end of a study
+                    if tag == '0020,000D':  # StudyInstanceUID
+                        current_study['StudyInstanceUID'] = value
+                        # Save this complete study
+                        if 'StudyInstanceUID' in current_study:
+                            studies.append(current_study)
+                        # Start fresh for next study
+                        current_study = {}
+                    elif tag == '0010,0010':  # PatientName
+                        current_study['PatientName'] = value
+                    elif tag == '0010,0020':  # PatientID
+                        current_study['PatientID'] = value
+                    elif tag == '0008,0020':  # StudyDate
+                        current_study['StudyDate'] = value
+                    elif tag == '0008,1030':  # StudyDescription
+                        current_study['StudyDescription'] = value
+            
+            # Fill in missing fields with empty strings
+            for study in studies:
+                for field in ['PatientName', 'PatientID', 'StudyDate', 'StudyDescription']:
+                    if field not in study:
+                        study[field] = ''
                         
-                        if value_elem is not None and value_elem.text:
-                            if keyword == 'StudyInstanceUID':
-                                study['StudyInstanceUID'] = value_elem.text.strip()
-                            elif keyword == 'PatientName':
-                                study['PatientName'] = value_elem.text.strip()
-                            elif keyword == 'StudyDate':
-                                study['StudyDate'] = value_elem.text.strip()
-                            elif keyword == 'StudyDescription':
-                                study['StudyDescription'] = value_elem.text.strip()
-                            elif keyword == 'PatientID':
-                                study['PatientID'] = value_elem.text.strip()
-                    
-                    # Only add if we have at least a StudyInstanceUID
-                    if 'StudyInstanceUID' in study:
-                        # Fill in missing fields with empty strings
-                        for field in ['PatientName', 'StudyDate', 'StudyDescription', 'PatientID']:
-                            if field not in study:
-                                study[field] = ''
-                        studies.append(study)
-                        
-                except ET.ParseError as e:
-                    # Only log at debug level as this is expected for malformed chunks
-                    self.logger.debug(f"Failed to parse XML chunk: {e}")
-                    continue
-                    
         except Exception as e:
             self.logger.error(f"Error parsing study metadata: {e}")
             
