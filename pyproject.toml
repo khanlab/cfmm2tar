@@ -12,6 +12,25 @@ authors = [
 maintainers = [
     { name = "isolove", email = "isolove@uwo.ca" },
 ]
+keywords = ["DICOM", "medical imaging", "PACS", "data retrieval", "neuroimaging"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Healthcare Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: System :: Archiving",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/khanlab/cfmm2tar"
+Repository = "https://github.com/khanlab/cfmm2tar"
+Issues = "https://github.com/khanlab/cfmm2tar/issues"
+Documentation = "https://github.com/khanlab/cfmm2tar/blob/master/README.md"
 
 dependencies = [
     "pydicom>=2.4.0",
@@ -28,6 +47,8 @@ build-backend = "hatchling.build"
 dev-dependencies = [
     "pytest>=8.0.0",
     "numpy>=1.24.0",
+    "ruff>=0.1.0",
+    "pre-commit>=3.5.0",
 ]
 
 [tool.pytest.ini_options]
@@ -36,3 +57,32 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+    "B904",  # Allow raising exceptions without from e
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
