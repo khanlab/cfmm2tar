@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env ython3
 """
 CLI script for cfmm2tar - Download a tarballed DICOM dataset from the CFMM DICOM server
 
@@ -80,7 +80,10 @@ Examples:
     parser.add_argument('-x', '--other-options', dest='other_options',
                         default=os.environ.get('OTHER_OPTIONS', ''),
                         help='Other options to pass to dcm4che tools (default: from OTHER_OPTIONS env var)')
-    
+    parser.add_argument('--dcm4che-container',dest='dcm4che_container',
+                        default=os.environ.get('DCM4CHE_CONTAINER', ''),
+                        help='Path to the dcm4che singularity/apptainer container (default: from DCM4CHE_CONTAINER env var, or no container)')
+   
     # Search options
     parser.add_argument('-d', '--date', dest='date_search',
                         default='-',
@@ -96,7 +99,8 @@ Examples:
                         help='StudyInstanceUID (Note: this will override other search options)')
     
     # Positional argument
-    parser.add_argument('output_dir',
+    parser.add_argument('-o','--output_dir',dest='output_dir',
+                        default='cfmm2tar',
                         help='Output folder for retrieved DICOM data')
     
     args = parser.parse_args()
@@ -130,7 +134,7 @@ Examples:
     
     # Call the main retrieve function
     keep_sorted_dicom = False
-    
+   
     try:
         retrieve_cfmm_tar.main(
             uwo_username=username,
@@ -145,7 +149,7 @@ Examples:
             study_instance_uid=args.study_instance_uid,
             other_options=args.other_options,
             downloaded_uids_filename=downloaded_uid_list,
-            dcm4che_path=''
+            dcm4che_path=f'apptainer exec {args.dcm4che_container}',
         )
         
         # Clean up intermediate directory if empty

@@ -108,7 +108,7 @@ class DicomSorter():
 
         '''
         try:
-            dataset = pydicom.read_file(filename, stop_before_pixels=True)
+            dataset = pydicom.dcmread(filename, stop_before_pixels=True)
 
             # dicomraw wrapped (wrapped by Igor's script)
             is_dicomraw_wrapped = \
@@ -130,6 +130,7 @@ class DicomSorter():
                 os.makedirs(output_directory)
 
             if is_dicomraw_wrapped:
+        
                 # unwrap command:
                 #./bin/dicomunwrap --input_file=/path/to/file.dcm --output_directory=/out/dir --decompress
                 cmd = '{} '.format(self.dicomunwrap_path) +\
@@ -149,6 +150,7 @@ class DicomSorter():
 
                 subprocess.check_call(cmd, shell=True)
 
+                
                 return output_directory
 
             else:
@@ -335,7 +337,7 @@ class DicomSorter():
         # for logging
         tar_full_filenames = tar_full_filename_dict.keys()
 
-        return tar_full_filenames + attached_tar_full_filenames
+        return list(tar_full_filename_dict.keys()) + attached_tar_full_filenames
 
     def _walk_and_apply_sort_rule(self, dicom_dirs, sort_rule_function):
         '''

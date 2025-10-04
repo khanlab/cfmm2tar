@@ -38,7 +38,7 @@ def insert_tag(dicom_dir):
         for filename in filenames:
             full_filename = os.path.join(root, filename)
             try:
-                ds = pydicom.read_file(full_filename, stop_before_pixels=True)
+                ds = pydicom.dcmread(full_filename, stop_before_pixels=True)
 
                 if "ProtocolName" not in ds:
 
@@ -92,7 +92,7 @@ def main(uwo_username,
     cfmm_dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
         connect, uwo_username, uwo_password, dcm4che_path, other_options)
 
-    if study_instance_uid == "'*'":
+    if study_instance_uid == "*":
         #  matching key
         matching_key = "-m StudyDescription='{}' -m StudyDate='{}' -m PatientName='{}'".format(
             PI_matching_key, study_date, patient_name
