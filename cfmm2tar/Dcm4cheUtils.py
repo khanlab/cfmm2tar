@@ -193,16 +193,19 @@ class Dcm4cheUtils():
         studies = []
         try:
             import xml.etree.ElementTree as ET
+            import re
             
-            # Split output by study boundaries (each study starts with <?xml)
-            xml_strings = out.decode('UTF-8').split('<?xml')
+            # Find all complete XML documents in the output using regex
+            # Look for <?xml...?> declarations followed by their content
+            output_text = out.decode('UTF-8')
             
-            for xml_str in xml_strings:
+            # Match XML documents: <?xml...?> followed by content up to </NativeDicomModel>
+            xml_pattern = r'(<\?xml[^?]*\?>\s*<NativeDicomModel[^>]*>.*?</NativeDicomModel>)'
+            xml_matches = re.findall(xml_pattern, output_text, re.DOTALL)
+            
+            for xml_str in xml_matches:
                 if not xml_str.strip():
                     continue
-                    
-                # Re-add the XML declaration
-                xml_str = '<?xml' + xml_str
                 
                 try:
                     root = ET.fromstring(xml_str)
@@ -235,6 +238,7 @@ class Dcm4cheUtils():
                         studies.append(study)
                         
                 except ET.ParseError as e:
+                    # Only log at debug level as this is expected for malformed chunks
                     self.logger.debug(f"Failed to parse XML chunk: {e}")
                     continue
                     
