@@ -1,0 +1,70 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      
+      - name: Install dependencies
+        run: |
+          uv pip install --system -e .
+          uv pip install --system pytest pytest-docker-compose
+      
+      - name: Install dcm4che tools
+        run: |
+          export DCM4CHE_VERSION=5.24.1
+          sudo bash install_dcm4che_ubuntu.sh /opt
+      
+      - name: Run unit tests
+        run: |
+          pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
+      
+      - name: Start dcm4chee PACS server
+        run: |
+          cd tests
+          docker-compose up -d
+          echo "Waiting for dcm4chee to start..."
+          sleep 60
+      
+      - name: Check dcm4chee status
+        run: |
+          cd tests
+          docker-compose ps
+          docker-compose logs arc | tail -50
+      
+      - name: Run integration tests
+        run: |
+          pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsIntegration -v
+        continue-on-error: true
+      
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          cd tests
+          docker-compose logs
+      
+      - name: Stop dcm4chee PACS server
+        if: always()
+        run: |
+          cd tests
+          docker-compose down -v
