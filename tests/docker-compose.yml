@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # LDAP server for dcm4chee authentication
   ldap:
-    image: dcm4che/slapd-dcm4chee:2.6.7-32.0
+    image: dcm4che/slapd-dcm4chee:2.6.8-34.1
     ports:
       - "389:389"
     environment:
@@ -14,7 +14,7 @@ services:
 
   # PostgreSQL database for dcm4chee
   db:
-    image: dcm4che/postgres-dcm4chee:16.2-32
+    image: dcm4che/postgres-dcm4chee:16.8-34
     environment:
       POSTGRES_DB: pacsdb
       POSTGRES_USER: pacs
@@ -24,7 +24,7 @@ services:
 
   # dcm4chee archive (PACS server)
   arc:
-    image: dcm4che/dcm4chee-arc-psql:5.32.0
+    image: dcm4che/dcm4chee-arc-psql:5.34.1
     ports:
       - "8080:8080"
       - "8443:8443"
