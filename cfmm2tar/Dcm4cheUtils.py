@@ -194,10 +194,24 @@ class Dcm4cheUtils():
         studies = []
         try:
             current_study = {}
+            in_response = False  # Track if we're in a C-FIND-RSP section
             
             lines = out.decode('UTF-8').split('\n')
             
             for line in lines:
+                # Track when we enter/exit response sections
+                # Only parse DICOM tags from C-FIND-RSP (responses), not C-FIND-RQ (requests)
+                if 'C-FIND-RSP Dataset:' in line:
+                    in_response = True
+                    continue
+                elif 'C-FIND-RQ' in line or 'C-FIND-RSP[' in line:
+                    in_response = False
+                    continue
+                
+                # Only process DICOM tags if we're in a response section
+                if not in_response:
+                    continue
+                    
                 # Look for lines with DICOM tags in format: (xxxx,xxxx) VR [value] Description
                 # Example: (0020,000D) UI [1.3.12.2.1107...] StudyInstanceUID
                 match = re.match(r'\(([0-9A-Fa-f]{4}),([0-9A-Fa-f]{4})\)\s+\w+\s+\[([^\]]*)\]\s+(.+)', line)
@@ -210,8 +224,8 @@ class Dcm4cheUtils():
                     # StudyInstanceUID comes last and marks the end of a study
                     if tag == '0020,000D':  # StudyInstanceUID
                         current_study['StudyInstanceUID'] = value
-                        # Save this complete study
-                        if 'StudyInstanceUID' in current_study:
+                        # Save this complete study only if it has a valid StudyInstanceUID
+                        if 'StudyInstanceUID' in current_study and current_study['StudyInstanceUID']:
                             studies.append(current_study)
                         # Start fresh for next study
                         current_study = {}

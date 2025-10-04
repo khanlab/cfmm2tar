@@ -77,6 +77,9 @@ Examples:
     parser.add_argument('-M', '--metadata-file', dest='metadata_file',
                         default='',
                         help='Path to metadata TSV file. If specified, only query and write metadata (no download). Can later use with --uid-from-file to download.')
+    parser.add_argument('--save-metadata', dest='save_metadata',
+                        default='',
+                        help='Path to save metadata TSV during download (includes tar file paths)')
     parser.add_argument('--uid-from-file', dest='uid_from_file',
                         default='',
                         help='Path to file containing StudyInstanceUIDs to download (one per line or TSV with StudyInstanceUID column)')
@@ -247,6 +250,7 @@ Examples:
                     other_options=args.other_options,
                     downloaded_uids_filename=downloaded_uid_list,
                     dcm4che_path=f'apptainer exec {args.dcm4che_container}',
+                    metadata_tsv_filename=args.save_metadata,
                 )
         else:
             # Normal mode - use search criteria
@@ -264,6 +268,7 @@ Examples:
                 other_options=args.other_options,
                 downloaded_uids_filename=downloaded_uid_list,
                 dcm4che_path=f'apptainer exec {args.dcm4che_container}',
+                metadata_tsv_filename=args.save_metadata,
             )
         
         # Clean up intermediate directory if empty
