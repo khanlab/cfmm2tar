@@ -20,15 +20,10 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-      
       - name: Install dependencies
         run: |
-          uv pip install --system -e .
-          uv pip install --system pytest pytest-docker-compose
+          pip install -e .
+          pip install pytest pydicom numpy
       
       - name: Install dcm4che tools
         run: |
@@ -42,15 +37,15 @@ jobs:
       - name: Start dcm4chee PACS server
         run: |
           cd tests
-          docker-compose up -d
+          docker compose up -d
           echo "Waiting for dcm4chee to start..."
           sleep 60
       
       - name: Check dcm4chee status
         run: |
           cd tests
-          docker-compose ps
-          docker-compose logs arc | tail -50
+          docker compose ps
+          docker compose logs arc | tail -50
       
       - name: Run integration tests
         run: |
@@ -61,10 +56,10 @@ jobs:
         if: failure()
         run: |
           cd tests
-          docker-compose logs
+          docker compose logs
       
       - name: Stop dcm4chee PACS server
         if: always()
         run: |
           cd tests
-          docker-compose down -v
+          docker compose down -v

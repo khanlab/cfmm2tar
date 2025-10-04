@@ -27,7 +27,7 @@ uv pip install -e ".[dev]"
 
 # Or with pip
 pip install -e .
-pip install pytest pytest-docker-compose
+pip install pytest pydicom numpy
 ```
 
 ### Install dcm4che Tools
@@ -54,7 +54,7 @@ Integration tests require a running dcm4chee PACS server:
 ```bash
 # Start the PACS server
 cd tests
-docker-compose up -d
+docker compose up -d
 
 # Wait for services to be ready (can take 1-2 minutes)
 sleep 60
@@ -65,7 +65,7 @@ pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsIntegration -v
 
 # Stop the PACS server
 cd tests
-docker-compose down -v
+docker compose down -v
 ```
 
 ### Run All Tests
@@ -135,14 +135,14 @@ def test_my_feature(dcm4che_server, temp_output_dir):
 
 If integration tests fail, the PACS server may need more time to start:
 - Increase the sleep time in the test setup
-- Check logs: `docker-compose logs arc`
+- Check logs: `docker compose logs arc`
 
 ### Connection Refused
 
 Ensure Docker services are running:
 ```bash
 cd tests
-docker-compose ps
+docker compose ps
 ```
 
 ### Port Conflicts
@@ -155,5 +155,5 @@ Remove all Docker volumes and containers:
 
 ```bash
 cd tests
-docker-compose down -v
+docker compose down -v
 ```

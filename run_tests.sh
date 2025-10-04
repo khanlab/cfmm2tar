@@ -10,7 +10,7 @@ echo ""
 # Check if pytest is installed
 if ! python3 -c "import pytest" 2>/dev/null; then
     echo "Installing test dependencies..."
-    pip install pytest pytest-docker-compose pydicom numpy
+    pip install pytest pydicom numpy
     echo ""
 fi
 
@@ -54,7 +54,7 @@ done
 if [ "$STOP_ONLY" = true ]; then
     echo "Stopping dcm4chee PACS server..."
     cd tests
-    docker-compose down -v
+    docker compose down -v
     echo "Done!"
     exit 0
 fi
@@ -73,16 +73,16 @@ if [ "$RUN_INTEGRATION" = true ]; then
         exit 1
     fi
     
-    # Start docker-compose
+    # Start docker compose
     cd tests
     echo "Starting Docker containers..."
-    docker-compose up -d
+    docker compose up -d
     
     echo "Waiting for dcm4chee to be ready (this may take 1-2 minutes)..."
     sleep 60
     
     echo "Checking container status..."
-    docker-compose ps
+    docker compose ps
     
     cd ..
     echo ""
@@ -94,7 +94,7 @@ if [ "$RUN_INTEGRATION" = true ]; then
     echo ""
     echo "=== Stopping dcm4chee PACS server ==="
     cd tests
-    docker-compose down -v
+    docker compose down -v
     
     exit $RESULT
 fi

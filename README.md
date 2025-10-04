@@ -144,8 +144,8 @@ This project includes a comprehensive testing framework using a containerized dc
 
 ```bash
 # Install development dependencies
-uv pip install -e .
-pip install pytest pytest-docker-compose
+pip install -e .
+pip install pytest pydicom numpy
 
 # Install dcm4che tools (required for integration tests)
 export DCM4CHE_VERSION=5.24.1
@@ -156,14 +156,14 @@ pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
 
 # Run integration tests (requires Docker)
 cd tests
-docker-compose up -d
+docker compose up -d
 sleep 60  # Wait for PACS to be ready
 cd ..
 pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsIntegration -v
 
 # Clean up
 cd tests
-docker-compose down -v
+docker compose down -v
 ```
 
 See [tests/README.md](tests/README.md) for detailed testing documentation.

@@ -13,16 +13,16 @@ from pathlib import Path
 @pytest.fixture(scope="session")
 def dcm4che_server():
     """
-    Start a dcm4chee PACS server using docker-compose for testing.
+    Start a dcm4chee PACS server using docker compose for testing.
     
     This fixture starts the server at session scope and tears it down after all tests.
     """
     compose_file = Path(__file__).parent / "docker-compose.yml"
     
-    # Start the docker-compose services
+    # Start the docker compose services
     print("\nStarting dcm4chee PACS server...")
     subprocess.run(
-        ["docker-compose", "-f", str(compose_file), "up", "-d"],
+        ["docker", "compose", "-f", str(compose_file), "up", "-d"],
         check=True,
         capture_output=True
     )
@@ -37,7 +37,7 @@ def dcm4che_server():
         try:
             # Check if the DICOM port is accepting connections
             result = subprocess.run(
-                ["docker-compose", "-f", str(compose_file), "exec", "-T", "arc", 
+                ["docker", "compose", "-f", str(compose_file), "exec", "-T", "arc", 
                  "nc", "-z", "localhost", "11112"],
                 capture_output=True,
                 timeout=5
@@ -64,10 +64,10 @@ def dcm4che_server():
         "password": "admin"
     }
     
-    # Teardown: stop docker-compose services
+    # Teardown: stop docker compose services
     print("\nStopping dcm4chee PACS server...")
     subprocess.run(
-        ["docker-compose", "-f", str(compose_file), "down", "-v"],
+        ["docker", "compose", "-f", str(compose_file), "down", "-v"],
         check=True,
         capture_output=True
     )
