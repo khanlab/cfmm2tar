@@ -135,3 +135,45 @@ This workflow is especially useful when:
 - Storage is limited and you need to select specific studies
 - You're sharing the metadata with collaborators to decide what to download
 - You need to filter studies based on multiple criteria
+
+## Development and Testing
+
+### Running Tests
+
+This project includes a comprehensive testing framework using a containerized dcm4che PACS instance.
+
+```bash
+# Install development dependencies
+pip install -e .
+pip install pytest pydicom numpy
+
+# Install dcm4che tools (required for integration tests)
+export DCM4CHE_VERSION=5.24.1
+sudo bash install_dcm4che_ubuntu.sh /opt
+
+# Run unit tests (no PACS server required)
+pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
+
+# Run integration tests (requires Docker)
+cd tests
+docker compose up -d
+sleep 60  # Wait for PACS to be ready
+cd ..
+pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsIntegration -v
+
+# Clean up
+cd tests
+docker compose down -v
+```
+
+See [tests/README.md](tests/README.md) for detailed testing documentation.
+
+### Continuous Integration
+
+The project uses GitHub Actions for automated testing. The workflow:
+1. Runs unit tests on every push and pull request
+2. Starts a containerized dcm4chee PACS server
+3. Runs integration tests against the PACS server
+4. Reports results
+
+See [.github/workflows/test.yml](.github/workflows/test.yml) for the complete workflow.

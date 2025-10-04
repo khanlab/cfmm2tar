@@ -6,3 +6,15 @@ uv.lock
 __pycache__/
 *.egg-info/
 
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+tests/test_output/
+tests/downloaded_uids.txt
+
+# Temporary test data
+test_*.dcm
+test_dicom/
+

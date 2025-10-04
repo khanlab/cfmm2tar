@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # LDAP server for dcm4chee authentication
+  ldap:
+    image: dcm4che/slapd-dcm4chee:2.6.8-34.1
+    ports:
+      - "389:389"
+    environment:
+      STORAGE_DIR: /storage/fs1
+    volumes:
+      - ldap-data:/var/lib/openldap/openldap-data
+      - ldap-config:/etc/openldap/slapd.d
+
+  # PostgreSQL database for dcm4chee
+  db:
+    image: dcm4che/postgres-dcm4chee:16.8-34
+    environment:
+      POSTGRES_DB: pacsdb
+      POSTGRES_USER: pacs
+      POSTGRES_PASSWORD: pacs
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  # dcm4chee archive (PACS server)
+  arc:
+    image: dcm4che/dcm4chee-arc-psql:5.34.1
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+      - "9990:9990"
+      - "9993:9993"
+      - "11112:11112"
+      - "2762:2762"
+      - "2575:2575"
+      - "12575:12575"
+    environment:
+      POSTGRES_DB: pacsdb
+      POSTGRES_USER: pacs
+      POSTGRES_PASSWORD: pacs
+      POSTGRES_HOST: db
+      WILDFLY_ADMIN_USER: admin
+      WILDFLY_ADMIN_PASSWORD: admin
+      LDAP_URL: ldap://ldap:389
+      LDAP_BASE_DN: dc=dcm4che,dc=org
+      LDAP_ROOTPASS: secret
+      LDAP_CONFIGPASS: secret
+      WILDFLY_CHOWN: /opt/wildfly/standalone /storage
+      WILDFLY_WAIT_FOR: ldap:389 db:5432
+      STORAGE_DIR: /storage/fs1
+    depends_on:
+      - ldap
+      - db
+    volumes:
+      - arc-wildfly:/opt/wildfly/standalone
+      - arc-storage:/storage
+
+volumes:
+  ldap-data:
+  ldap-config:
+  db-data:
+  arc-wildfly:
+  arc-storage:
