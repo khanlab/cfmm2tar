@@ -2,6 +2,11 @@
 
 Download a tarballed DICOM dataset from the CFMM DICOM server
 
+## Requirements
+
+- Python 3.11+
+- uv (for dependency management)
+
 ## Docker image
 
 1. Install Docker
@@ -31,3 +36,21 @@ docker run -i -t --rm --volume ${OUTPUT_DIR}:/data cfmm2tar -p 'Everling^Marmose
 ```
 
 (You will be asked for your UWO username and password, and will only be able to find and download datasets to which you have read permissions).
+
+## Local Installation
+
+### Using uv (recommended)
+
+```bash
+# Install uv if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies
+uv pip install -e .
+```
+
+### Using pip
+
+```bash
+pip install -r requirements.txt
+```

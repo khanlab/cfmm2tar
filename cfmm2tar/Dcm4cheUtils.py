@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''
 Define a Dcm4cheUtils class, which can get StudyInstanceUID by matching key, retrieve dicom files to a destination directory.
 
@@ -17,7 +17,7 @@ import logging
 import time
 
 # for quote python strings for safe use in posix shells
-import pipes
+import shlex
 
 
 class Dcm4cheUtils():
@@ -34,22 +34,21 @@ class Dcm4cheUtils():
 
         self._findscu_str = \
             '''{} findscu'''.format(self.dcm4che_path) +\
-            ' --bind  DEFAULT' +\
+            ' --bind  DEFAULT --tls-aes ' +\
             ' --connect {}'.format(self.connect) +\
             ' --accept-timeout 10000 ' +\
             ' {} '.format(other_options) +\
-            ''' --user {} '''.format(pipes.quote(self.username)) +\
-            ''' --user-pass {} '''.format(pipes.quote(self.password))
+            ''' --user {} '''.format(shlex.quote(self.username)) +\
+            ''' --user-pass {} '''.format(shlex.quote(self.password))
 
         self._getscu_str = \
             '''{} getscu'''.format(self.dcm4che_path) +\
-            ' --bind  DEFAULT ' +\
+            ' --bind  DEFAULT --tls-aes ' +\
             ' --connect {} '.format(self.connect) +\
             ' --accept-timeout 10000 ' + \
             ' {} '.format(other_options) + \
-            ''' --user {} '''.format(pipes.quote(self.username)) +\
-            ''' --user-pass {} '''.format(pipes.quote(self.password))
-
+            ''' --user {} '''.format(shlex.quote(self.username)) +\
+            ''' --user-pass {} '''.format(shlex.quote(self.password))
     def _get_stdout_stderr_returncode(self, cmd):
         """
         Execute the external command and get its stdout, stderr and return code
@@ -78,6 +77,7 @@ class Dcm4cheUtils():
         '''
 
         # findscu
+
         cmd = self._findscu_str +\
             ''' {}'''.format(matching_key) +\
             ' -r 00201208' +\
@@ -92,10 +92,10 @@ class Dcm4cheUtils():
             if err != 'Picked up _JAVA_OPTIONS: -Xmx2048m\n':
                 self.logger.error(err)
 
-        instances_str = out
+        instances_str = out.decode('UTF-8')
         return instances_str
 
-    def _ready_for_retrieve(self, matching_key, sleep_sec=30):
+    def _ready_for_retrieve(self, matching_key, sleep_sec=2):
         '''
         pre=get mathing's key's NumberOfStudyRelatedInstances
         if pre not empty:
@@ -140,7 +140,6 @@ class Dcm4cheUtils():
             ''' {} '''.format(matching_key) +\
             ' -r StudyInstanceUID' +\
             ' |grep -i 0020,000D |cut -d[ -f 2 | cut -d] -f 1'  # grep StudyInstanceUID
-
         out, err, return_code = self._get_stdout_stderr_returncode(cmd)
 
         # local dcm4che
@@ -153,7 +152,7 @@ class Dcm4cheUtils():
 
         # remove empty lines
         StudyInstanceUID_list = [
-            x for x in StudyInstanceUID_list_temp.splitlines() if x]
+            x.decode('UTF-8') for x in StudyInstanceUID_list_temp.splitlines() if x]
 
         return StudyInstanceUID_list
 

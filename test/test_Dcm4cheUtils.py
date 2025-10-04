@@ -1,6 +1,6 @@
 
 import logging
-import Dcm4cheUtils
+from cfmm2tar import Dcm4cheUtils
 
 logging.basicConfig(
     level=logging.DEBUG, format='%(lineno)d-%(asctime)s-%(levelname)s-%(message)s', datefmt='%Y/%m/%d %I:%M:%S')

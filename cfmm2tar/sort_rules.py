@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''
 dicom sort rule functions:
 
@@ -45,9 +45,9 @@ def sort_rule_demo(filename):
         return re.sub(r'[^a-zA-Z0-9.-]', '_', '{0}'.format(path))
 
     try:
-        dataset = pydicom.read_file(filename, stop_before_pixels=True)
+        dataset = pydicom.dcmread(filename, stop_before_pixels=True)
 
-        patient_name = clean_path(dataset.PatientName.replace('^', '_'))
+        patient_name = clean_path(str(dataset.PatientName).replace('^', '_'))
         print('patient_name', patient_name)
         study_date = clean_path(dataset.StudyDate)
         series_number = clean_path(
@@ -117,7 +117,7 @@ def sort_rule_CFMM(filename):
         return '{0:08X}'.format(code)
 
     try:
-        dataset = pydicom.read_file(filename, stop_before_pixels=True)
+        dataset = pydicom.dcmread(filename, stop_before_pixels=True)
 
         # CFMM's newer data:'PI^project'->['PI','project']
         # CFMM's older GE data:'PI project'->['PI','project']
@@ -125,7 +125,7 @@ def sort_rule_CFMM(filename):
         pi = clean_path(pi_project[0])
         project = clean_path(pi_project[1])
         study_date = clean_path(dataset.StudyDate)
-        patient = clean_path(dataset.PatientName.partition('^')[0])
+        patient = clean_path(str(dataset.PatientName).partition('^')[0])
         studyID_and_hash_studyInstanceUID = clean_path('.'.join([dataset.StudyID or 'NA',
                                                                  hashcode(dataset.StudyInstanceUID)]))
         series_number = clean_path(
