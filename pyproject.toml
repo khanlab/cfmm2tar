@@ -25,16 +25,15 @@ classifiers = [
     "Topic :: System :: Archiving",
     "Operating System :: OS Independent",
 ]
+dependencies = [
+    "pydicom>=2.4.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/khanlab/cfmm2tar"
 Repository = "https://github.com/khanlab/cfmm2tar"
 Issues = "https://github.com/khanlab/cfmm2tar/issues"
 Documentation = "https://github.com/khanlab/cfmm2tar/blob/master/README.md"
-
-dependencies = [
-    "pydicom>=2.4.0",
-]
 
 [project.scripts]
 cfmm2tar = "cfmm2tar.cli:main"
