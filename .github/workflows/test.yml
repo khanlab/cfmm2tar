@@ -21,9 +21,12 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
       - name: Install ruff
         run: |
-          pip install ruff
+          uv pip install --system ruff
 
       - name: Run ruff linter
         run: |
@@ -47,10 +50,13 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
       - name: Install dependencies
         run: |
-          pip install -e .
-          pip install pytest pydicom numpy
+          uv pip install --system -e .
+          uv pip install --system pytest pydicom numpy
 
       - name: Install dcm4che tools
         run: |
