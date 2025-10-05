@@ -45,6 +45,32 @@ Thank you for your interest in contributing to cfmm2tar! This document provides 
 
 This project uses several tools to maintain code quality:
 
+## Versioning
+
+This project uses dynamic versioning based on git tags:
+
+- Version numbers are automatically determined from git tags using `hatch-vcs`
+- Tags should follow semantic versioning (e.g., `v2.1.0`, `v2.1.1`)
+- When you build the package, the version is extracted from the most recent git tag
+- During development (without a build), the version falls back to `0.0.0+unknown`
+
+### Creating a Release
+
+To create a new release:
+
+1. Tag the commit with a version number:
+   ```bash
+   git tag v2.1.0
+   git push origin v2.1.0
+   ```
+
+2. Create a GitHub release from the tag (or the workflow will create one automatically)
+
+3. The CI/CD workflows will automatically:
+   - Build the Python package with the version from the tag
+   - Build the Docker container with the version label
+   - Publish to PyPI and container registries
+
 ### Linting and Formatting
 
 We use [ruff](https://github.com/astral-sh/ruff) for both linting and formatting:
