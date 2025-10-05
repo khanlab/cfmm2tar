@@ -2,58 +2,134 @@
 
 Download a tarballed DICOM dataset from the CFMM DICOM server
 
-## Requirements
+## Overview
 
-- Python 3.11+
-- uv (for dependency management)
+`cfmm2tar` is a command-line tool for querying and downloading DICOM studies from the CFMM (Centre for Functional and Metabolic Mapping) DICOM server. It provides three flexible deployment options to suit different environments and use cases.
 
-## Docker image
+## Installation & Usage
 
-1. Install Docker
+There are **three ways** to run `cfmm2tar`, each with different requirements:
 
-2. Clone this repo and build the image:
+### Option 1: Docker Container (Recommended - All-in-One)
 
+This is the easiest method as it includes **all dependencies** (Python, dcm4che tools, and DicomRaw utilities) in a single container.
+
+**Requirements:** Docker or Podman
+
+**Installation:**
 ```bash
+# Pull from GitHub Container Registry
+docker pull ghcr.io/khanlab/cfmm2tar:latest
+
+# Or build locally
 git clone https://github.com/khanlab/cfmm2tar
 cd cfmm2tar
 docker build -t cfmm2tar .
 ```
 
-3. Run the containerized `cfmm2tar`:
-
+**Usage:**
 ```bash
 OUTPUT_DIR=/path/to/dir
-mkdir ${OUTPUT_DIR}
-docker run -i -t --rm --volume ${OUTPUT_DIR}:/data cfmm2tar
-```
+mkdir -p ${OUTPUT_DIR}
 
-This will display help on using `cfmm2tar`
+# Show help
+docker run --rm cfmm2tar --help
 
-Search and download a specific dataset, e.g.
-
-```bash
+# Download studies
 docker run -i -t --rm --volume ${OUTPUT_DIR}:/data cfmm2tar -p 'Everling^Marmoset' -d '20180803' /data
 ```
 
-(You will be asked for your UWO username and password, and will only be able to find and download datasets to which you have read permissions).
+You will be prompted for your UWO username and password. You can only download datasets to which you have read permissions.
 
-## Local Installation
+### Option 2: Apptainer/Singularity Container (For HPC Environments)
 
-### Using uv (recommended)
+Similar to Docker but designed for HPC clusters where Docker may not be available.
 
+**Requirements:** Apptainer (formerly Singularity)
+
+**Installation:**
 ```bash
-# Install uv if not already installed
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# Build from Docker image
+apptainer build cfmm2tar.sif docker://ghcr.io/khanlab/cfmm2tar:latest
 
-# Install dependencies
-uv pip install -e .
+# Or build from definition file
+apptainer build cfmm2tar.sif Singularity
 ```
 
-### Using pip
-
+**Usage:**
 ```bash
-pip install -r requirements.txt
+OUTPUT_DIR=/path/to/dir
+mkdir -p ${OUTPUT_DIR}
+
+# Show help
+apptainer run cfmm2tar.sif --help
+
+# Download studies
+apptainer run --bind ${OUTPUT_DIR}:/data cfmm2tar.sif -p 'Khan^Project' -d '20240101' /data
 ```
+
+### Option 3: PyPI Installation (For Python Environments)
+
+Install `cfmm2tar` as a Python package. **Note:** This method requires additional setup for dcm4che tools.
+
+**Requirements:** 
+- Python 3.11+
+- **Either** dcm4che tools installed locally **OR** a container with dcm4che tools
+
+**Installation:**
+```bash
+# From PyPI (when published)
+pip install cfmm2tar
+
+# Or install from source
+git clone https://github.com/khanlab/cfmm2tar
+cd cfmm2tar
+pip install -e .
+```
+
+**Setup dcm4che tools:**
+
+You have two options:
+
+#### Option 3a: Install dcm4che locally
+```bash
+export DCM4CHE_VERSION=5.24.1
+sudo bash install_dcm4che_ubuntu.sh /opt
+export PATH=/opt/dcm4che-${DCM4CHE_VERSION}/bin:$PATH
+```
+
+#### Option 3b: Use a dcm4che container
+```bash
+# Pull a container with dcm4che tools
+apptainer pull docker://ghcr.io/khanlab/cfmm2tar:latest
+
+# Set environment variable
+export DCM4CHE_CONTAINER=/path/to/cfmm2tar.sif
+```
+
+**Usage:**
+```bash
+OUTPUT_DIR=/path/to/dir
+mkdir -p ${OUTPUT_DIR}
+
+# If dcm4che tools are in PATH (Option 3a)
+cfmm2tar -p 'Khan^Project' -d '20240101' ${OUTPUT_DIR}
+
+# If using a dcm4che container (Option 3b)
+cfmm2tar --dcm4che-container /path/to/cfmm2tar.sif -p 'Khan^Project' -d '20240101' ${OUTPUT_DIR}
+
+# Or set environment variable
+export DCM4CHE_CONTAINER=/path/to/cfmm2tar.sif
+cfmm2tar -p 'Khan^Project' -d '20240101' ${OUTPUT_DIR}
+```
+
+## Comparison of Methods
+
+| Method | Pros | Cons | Best For |
+|--------|------|------|----------|
+| **Docker Container** | ✅ All dependencies included<br>✅ Consistent environment<br>✅ Easy to use | ❌ Requires Docker | End users, workstations |
+| **Apptainer Container** | ✅ All dependencies included<br>✅ Works on HPC clusters<br>✅ No root required | ❌ Need to build/pull container | HPC environments |
+| **PyPI Install** | ✅ Integrates with Python environment<br>✅ Easy to script | ❌ Requires separate dcm4che setup<br>❌ More complex setup | Python developers, scripting |
 
 ## Usage
 
@@ -137,6 +213,45 @@ This workflow is especially useful when:
 - You need to filter studies based on multiple criteria
 
 ## Development and Testing
+
+### Development Setup
+
+For contributors and developers:
+
+```bash
+# Clone the repository
+git clone https://github.com/khanlab/cfmm2tar
+cd cfmm2tar
+
+# Install in development mode with dev dependencies
+pip install -e .
+pip install ruff pre-commit pytest pydicom numpy
+
+# Set up pre-commit hooks (runs quality checks before each commit)
+pre-commit install
+
+# Install dcm4che tools (required for integration tests)
+export DCM4CHE_VERSION=5.24.1
+sudo bash install_dcm4che_ubuntu.sh /opt
+```
+
+### Code Quality and Formatting
+
+This project uses `ruff` for linting and formatting:
+
+```bash
+# Format code
+ruff format .
+
+# Check for lint issues
+ruff check .
+
+# Fix auto-fixable issues
+ruff check --fix .
+
+# Run pre-commit hooks manually
+pre-commit run --all-files
+```
 
 ### Running Tests
 

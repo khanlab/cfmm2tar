@@ -1,0 +1,10 @@
+include README.md
+include LICENSE
+include CONTRIBUTING.md
+include pyproject.toml
+include requirements.txt
+include install_dcm4che_ubuntu.sh
+include *.sh
+recursive-include tests *.py *.yml *.yaml
+prune tests/test_output
+prune .github

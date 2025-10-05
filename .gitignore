@@ -18,3 +18,19 @@ tests/downloaded_uids.txt
 test_*.dcm
 test_dicom/
 
+# Build artifacts
+dist/
+build/
+*.whl
+*.tar.gz
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Pre-commit
+.pre-commit-config.yaml.backup
+
