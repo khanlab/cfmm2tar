@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 LABEL author=yinglilu@gmail.com
 LABEL maintainer=isolove@uwo.ca
 LABEL version=0.0.3
@@ -20,12 +20,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends apt-utils \
     openssh-client
 
 # Install uv for dependency management
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.cargo/bin:$PATH"
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # dcm4che requires JRE
 # enable TLSv1.1 for dcm4chee v2
-RUN apt-get install -y default-jre && sed -i 's/TLSv1.1, //g' /etc/java-11-openjdk/security/java.security
+RUN apt-get install -y default-jre && \
+    find /etc -name java.security -exec sed -i 's/TLSv1.1, //g' {} \; 2>/dev/null || true
 
 # Copy Python package structure
 COPY cfmm2tar /apps/cfmm2tar_src/cfmm2tar
@@ -33,10 +33,10 @@ COPY pyproject.toml /apps/cfmm2tar_src/
 COPY README.md /apps/cfmm2tar_src/
 
 # Install Python dependencies using uv
-RUN cd /apps/cfmm2tar_src && uv pip install --system -e .
+RUN cd /apps/cfmm2tar_src && uv pip install --system --break-system-packages -e .
 
 #dicomunwrap, will install pydicom
-RUN cd /apps && git clone https://gitlab.com/cfmm/DicomRaw && cd DicomRaw && uv pip install --system -r requirements.txt
+RUN cd /apps && git clone https://gitlab.com/cfmm/DicomRaw && cd DicomRaw && uv pip install --system --break-system-packages -r requirements.txt
 
 COPY *.sh /src/
 
