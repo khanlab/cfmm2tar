@@ -1,7 +1,8 @@
 FROM ubuntu:24.04
+ARG VERSION=unknown
 LABEL author=yinglilu@gmail.com
 LABEL maintainer=isolove@uwo.ca
-LABEL version=0.0.3
+LABEL version=${VERSION}
 
 #needed for keytool
 RUN if [ ! -e /dev/fd ]; then ln -s /proc/self/fd /dev/fd; fi

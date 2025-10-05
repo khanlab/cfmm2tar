@@ -24,6 +24,9 @@ build/
 *.whl
 *.tar.gz
 
+# Generated version file
+cfmm2tar/_version.py
+
 # IDE
 .vscode/
 .idea/
