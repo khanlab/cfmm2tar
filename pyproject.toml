@@ -1,6 +1,6 @@
 [project]
 name = "cfmm2tar"
-version = "0.0.3"
+version = "2.0.1"
 description = "Download a tarballed DICOM dataset from the CFMM DICOM server"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -8,9 +8,6 @@ license = { text = "MIT" }
 authors = [
     { name = "YingLi Lu", email = "yinglilu@gmail.com" },
     { name = "Ali Khan" },
-]
-maintainers = [
-    { name = "isolove", email = "isolove@uwo.ca" },
 ]
 keywords = ["DICOM", "medical imaging", "PACS", "data retrieval", "neuroimaging"]
 classifiers = [
