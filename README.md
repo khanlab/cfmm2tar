@@ -122,6 +122,36 @@ This creates a TSV file with columns:
 - `StudyDate`: Date of the study
 - `StudyDescription`: Study description (typically Principal^Project)
 
+#### Series-Level Metadata
+
+For more granular control, you can export series-level metadata (one row per series instead of one row per study):
+
+```bash
+# Export series-level metadata
+cfmm2tar -M series_metadata.tsv --series-metadata -p 'Khan^NeuroAnalytics' -d '20240101'
+```
+
+Series-level metadata includes additional fields similar to [heudiconv](https://github.com/nipy/heudiconv)'s `dicominfo.tsv`:
+- `SeriesInstanceUID`: Unique identifier for each series
+- `SeriesNumber`: Series number
+- `SeriesDescription`: Description of the series
+- `ProtocolName`: Scanning protocol name (e.g., "T1_MPRAGE", "fMRI_BOLD")
+- `SequenceName`: Technical sequence name
+- `ImageType`: DICOM image type flags
+- `is_derived`: Boolean indicating if series is derived (e.g., ADC maps, motion-corrected images)
+- `is_motion_corrected`: Boolean indicating motion correction
+- `dim1`, `dim2`, `dim3`: Image dimensions
+- `tr`, `te`, `fa`: Imaging parameters (Repetition Time, Echo Time, Flip Angle)
+- `slice_thickness`: Slice thickness
+- `acquisition_time`: Acquisition time
+- `Modality`: Imaging modality (MR, CT, etc.)
+
+This is particularly useful for:
+- Filtering out derived/processed series before download
+- Selecting specific sequences (e.g., only T1-weighted scans)
+- Quality control and protocol verification
+- Planning downstream processing with heudiconv/tar2bids
+
 ### Download from UID List
 
 After reviewing the metadata file, you can download specific studies:
@@ -130,6 +160,9 @@ After reviewing the metadata file, you can download specific studies:
 # Download all studies from the metadata file
 cfmm2tar --uid-from-file study_metadata.tsv output_dir
 
+# Download from series-level metadata (automatically filters to specified series)
+cfmm2tar --uid-from-file series_metadata_filtered.tsv output_dir
+
 # Or create a filtered version of the metadata file and download only those
 # (e.g., filter in Excel, grep, awk, or Python)
 cfmm2tar --uid-from-file study_metadata_filtered.tsv output_dir
@@ -137,6 +170,8 @@ cfmm2tar --uid-from-file study_metadata_filtered.tsv output_dir
 # You can also use a simple text file with one UID per line
 cfmm2tar --uid-from-file uid_list.txt output_dir
 ```
+
+**Note:** When using a series-level metadata file with `--uid-from-file`, cfmm2tar will download the entire study but only include the specified series in the output metadata (if `--save-metadata` is used). The tar file will still contain all series from the study.
 
 ### Track Downloaded Studies
 
@@ -148,6 +183,8 @@ cfmm2tar -U ~/downloaded_uid_list.txt -p 'Khan^NeuroAnalytics' output_dir
 ```
 
 ### Workflow Example
+
+#### Basic Workflow (Study-Level)
 
 1. **Query and export metadata** for review:
    ```bash
@@ -161,11 +198,31 @@ cfmm2tar -U ~/downloaded_uid_list.txt -p 'Khan^NeuroAnalytics' output_dir
    cfmm2tar --uid-from-file all_studies_filtered.tsv output_dir
    ```
 
+#### Advanced Workflow (Series-Level)
+
+1. **Query series-level metadata**:
+   ```bash
+   cfmm2tar -M all_series.tsv --series-metadata -p 'Khan^NeuroAnalytics' -d '20240101-20240131'
+   ```
+
+2. **Filter series** based on your criteria (e.g., exclude derived images):
+   ```bash
+   # Example: Filter out derived series and keep only original acquisitions
+   awk -F'\t' 'NR==1 || $12=="False"' all_series.tsv > original_series.tsv
+   ```
+
+3. **Download studies** with filtered series metadata:
+   ```bash
+   cfmm2tar --uid-from-file original_series.tsv --save-metadata downloaded.tsv output_dir
+   ```
+
 This workflow is especially useful when:
 - You want to review available studies before downloading
-- Storage is limited and you need to select specific studies
+- Storage is limited and you need to select specific studies or series
 - You're sharing the metadata with collaborators to decide what to download
 - You need to filter studies based on multiple criteria
+- You want to exclude derived/processed images from your downloads
+- You're preparing data for heudiconv/tar2bids conversion
 
 ## TLS Certificate Management
 

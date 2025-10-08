@@ -62,8 +62,14 @@ Examples:
   %(prog)s -M study_metadata.tsv -p 'Khan^NeuroAnalytics' -d '20170530'
       Query and write study metadata to TSV file (no download)
 
+  %(prog)s -M series_metadata.tsv --series-metadata -p 'Khan^NeuroAnalytics' -d '20170530'
+      Query and write series-level metadata to TSV file (one row per series)
+
   %(prog)s --uid-from-file study_metadata.tsv myfolder
       Download studies using UIDs from metadata file
+
+  %(prog)s --uid-from-file series_metadata.tsv myfolder
+      Download specific series from series-level metadata file
 
   %(prog)s -t /scratch/$USER/cfmm2tar_intermediate_dicoms -n '*subj01*' myfolder
       Specify intermediate dicoms dir
