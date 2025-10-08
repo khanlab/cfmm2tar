@@ -2,8 +2,9 @@
 Integration tests for Dcm4cheUtils with containerized dcm4che PACS server.
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from cfmm2tar import Dcm4cheUtils
 

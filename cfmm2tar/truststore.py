@@ -15,7 +15,6 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-
 # URL for the UWO Sectigo certificate
 SECTIGO_CERT_URL = (
     "https://pki.uwo.ca/sectigo/certificates/SectigoRSAOrganizationValidationSecureServerCA-int.pem"
@@ -101,9 +100,7 @@ def ensure_truststore(cache_dir=None, force_refresh=False):
         )
 
         if result.returncode != 0:
-            raise RuntimeError(
-                f"Failed to download certificate: {result.stderr or result.stdout}"
-            )
+            raise RuntimeError(f"Failed to download certificate: {result.stderr or result.stdout}")
 
         # Verify the certificate file was downloaded and is not empty
         if not os.path.exists(cert_filename) or os.path.getsize(cert_filename) == 0:

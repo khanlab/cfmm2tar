@@ -137,9 +137,7 @@ class TestTruststore:
 
                     with patch("os.unlink"):
                         with pytest.raises(RuntimeError, match="Failed to download certificate"):
-                            truststore.ensure_truststore(
-                                cache_dir=temp_dir, force_refresh=True
-                            )
+                            truststore.ensure_truststore(cache_dir=temp_dir, force_refresh=True)
 
     def test_ensure_truststore_keytool_failure(self):
         """Test handling of keytool failure."""
@@ -173,7 +171,9 @@ class TestTruststore:
                     with patch("os.path.exists", side_effect=mock_exists):
                         with patch("os.path.getsize", side_effect=mock_getsize):
                             with patch("os.unlink"):
-                                with pytest.raises(RuntimeError, match="Failed to create trust store"):
+                                with pytest.raises(
+                                    RuntimeError, match="Failed to create trust store"
+                                ):
                                     truststore.ensure_truststore(
                                         cache_dir=temp_dir, force_refresh=True
                                     )
