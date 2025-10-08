@@ -7,8 +7,8 @@ Email:  yinglilu@gmail.com
 Date:   2018-05-22
 
 note:
-    Works on Linux/Mac only.
-    Tested on Ubuntu 16.04, python 2.7.13
+    Cross-platform compatible (uses XML parsing instead of shell commands).
+    Originally tested on Ubuntu 16.04, python 2.7.13
 """
 
 import logging
