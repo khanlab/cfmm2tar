@@ -86,6 +86,12 @@ Examples:
         help="Path to metadata TSV file. If specified, only query and write metadata (no download). Can later use with --uid-from-file to download.",
     )
     parser.add_argument(
+        "--series-metadata",
+        dest="series_metadata",
+        action="store_true",
+        help="Include series-level metadata (one row per series) instead of study-level (one row per study). Includes fields similar to heudiconv dicominfo.tsv.",
+    )
+    parser.add_argument(
         "--save-metadata",
         dest="save_metadata",
         default="",
@@ -214,26 +220,72 @@ Examples:
         # Write to TSV file
         import csv
 
-        with open(args.metadata_file, "w", newline="") as f:
-            fieldnames = [
-                "StudyInstanceUID",
-                "PatientName",
-                "PatientID",
-                "StudyDate",
-                "StudyDescription",
-            ]
-            writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t")
-            writer.writeheader()
-            for study in studies:
-                writer.writerow(study)
+        if args.series_metadata:
+            # Query series-level metadata for each study
+            print("Querying series-level metadata for each study...")
+            all_series = []
+            for i, study in enumerate(studies):
+                print(f"  Querying series for study {i+1}/{len(studies)}: {study.get('StudyInstanceUID', '')}")
+                series_list = cfmm_dcm4che_utils.get_series_metadata_by_study_uid(
+                    study["StudyInstanceUID"]
+                )
+                # Add study-level fields to each series
+                for series in series_list:
+                    series["PatientName"] = study.get("PatientName", "")
+                    series["PatientID"] = study.get("PatientID", "")
+                    series["StudyDate"] = study.get("StudyDate", "")
+                    series["StudyDescription"] = study.get("StudyDescription", "")
+                    all_series.append(series)
+            
+            print(f"Found {len(all_series)} series across {len(studies)} studies")
+            
+            # Write series metadata to TSV
+            with open(args.metadata_file, "w", newline="") as f:
+                fieldnames = [
+                    "StudyInstanceUID",
+                    "SeriesInstanceUID",
+                    "PatientName",
+                    "PatientID",
+                    "StudyDate",
+                    "StudyDescription",
+                    "SeriesNumber",
+                    "SeriesDescription",
+                    "ProtocolName",
+                    "Modality",
+                    "SequenceName",
+                    "ImageType",
+                ]
+                writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t")
+                writer.writeheader()
+                for series in all_series:
+                    writer.writerow(series)
+            
+            print(f"Series metadata written to: {args.metadata_file}")
+        else:
+            # Original study-level metadata
+            with open(args.metadata_file, "w", newline="") as f:
+                fieldnames = [
+                    "StudyInstanceUID",
+                    "PatientName",
+                    "PatientID",
+                    "StudyDate",
+                    "StudyDescription",
+                ]
+                writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t")
+                writer.writeheader()
+                for study in studies:
+                    writer.writerow(study)
 
-        print(f"Study metadata written to: {args.metadata_file}")
+            print(f"Study metadata written to: {args.metadata_file}")
+        
         print("\nTo download these studies later, use:")
         print(f"  cfmm2tar --uid-from-file {args.metadata_file} <output_dir>")
         sys.exit(0)
 
     # Handle uid-from-file mode (download specific UIDs from file)
     study_instance_uid = args.study_instance_uid
+    series_filter = None  # Will hold series UIDs to filter if series-level TSV
+    
     if args.uid_from_file:
         # Read UIDs from file
         uids = []
@@ -246,11 +298,31 @@ Examples:
             import csv
 
             reader = csv.DictReader(lines, delimiter="\t")
-            for row in reader:
-                if "StudyInstanceUID" in row:
-                    uid = row["StudyInstanceUID"].strip()
-                    if uid:
-                        uids.append(uid)
+            rows = list(reader)
+            
+            # Check if this is series-level metadata (has SeriesInstanceUID column)
+            if rows and "SeriesInstanceUID" in rows[0]:
+                print("Detected series-level metadata file")
+                # Build a dict mapping StudyUID -> list of SeriesUIDs
+                series_filter = {}
+                for row in rows:
+                    study_uid = row.get("StudyInstanceUID", "").strip()
+                    series_uid = row.get("SeriesInstanceUID", "").strip()
+                    if study_uid and series_uid:
+                        if study_uid not in series_filter:
+                            series_filter[study_uid] = []
+                        series_filter[study_uid].append(series_uid)
+                
+                # Get unique study UIDs
+                uids = list(series_filter.keys())
+                print(f"Will download {len(uids)} studies with {sum(len(s) for s in series_filter.values())} series")
+            else:
+                # Study-level metadata
+                for row in rows:
+                    if "StudyInstanceUID" in row:
+                        uid = row["StudyInstanceUID"].strip()
+                        if uid:
+                            uids.append(uid)
         else:
             # Simple text file, one UID per line
             for line in lines:
@@ -262,7 +334,8 @@ Examples:
             print(f"No StudyInstanceUIDs found in {args.uid_from_file}")
             sys.exit(1)
 
-        print(f"Will download {len(uids)} studies from {args.uid_from_file}")
+        if not series_filter:
+            print(f"Will download {len(uids)} studies from {args.uid_from_file}")
 
     # Read or prompt for credentials
     username, password = read_credentials(args.credentials_file)
@@ -299,6 +372,11 @@ Examples:
             # Download each UID from the file
             for i, uid in enumerate(uids):
                 print(f"\nDownloading study {i + 1}/{len(uids)}: {uid}")
+                # Get series filter for this study if available
+                study_series_filter = None
+                if series_filter and uid in series_filter:
+                    study_series_filter = {uid: series_filter[uid]}
+                
                 retrieve_cfmm_tar.main(
                     uwo_username=username,
                     uwo_password=password,
@@ -314,6 +392,8 @@ Examples:
                     downloaded_uids_filename=downloaded_uid_list,
                     metadata_tsv_filename=args.save_metadata,
                     force_refresh_trust_store=args.refresh_trust_store,
+                    series_metadata_flag=args.series_metadata or (series_filter is not None),
+                    series_filter=study_series_filter,
                 )
         else:
             # Normal mode - use search criteria
@@ -332,6 +412,8 @@ Examples:
                 downloaded_uids_filename=downloaded_uid_list,
                 metadata_tsv_filename=args.save_metadata,
                 force_refresh_trust_store=args.refresh_trust_store,
+                series_metadata_flag=args.series_metadata,
+                series_filter=None,
             )
 
         # Clean up intermediate directory if empty

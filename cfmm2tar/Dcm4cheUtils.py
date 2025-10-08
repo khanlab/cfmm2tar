@@ -363,6 +363,133 @@ class Dcm4cheUtils:
         pi_names = [name.encode("UTF-8") for name in sorted(pi_names_set)]
         return pi_names
 
+    def get_series_metadata_by_study_uid(self, study_instance_uid):
+        """
+        Get series metadata for a specific study
+
+        input:
+            study_instance_uid: StudyInstanceUID to query series for
+        output:
+            list of dicts, each containing series-level metadata:
+                [{'StudyInstanceUID': '...',
+                  'SeriesInstanceUID': '...',
+                  'SeriesNumber': '...',
+                  'SeriesDescription': '...',
+                  'ProtocolName': '...',
+                  'Modality': '...',
+                  ...},
+                 ...]
+        """
+        # Build matching key for series query
+        matching_key = f"-m StudyInstanceUID='{study_instance_uid}'"
+        
+        # Tags to retrieve for series-level metadata
+        return_tags = [
+            "StudyInstanceUID",
+            "SeriesInstanceUID",
+            "SeriesNumber",
+            "SeriesDescription",
+            "ProtocolName",
+            "Modality",
+            "SequenceName",
+            "ImageType",
+        ]
+        
+        # Use SERIES level query
+        cmd = self._findscu_str + f" {matching_key} -L SERIES"
+        
+        # Add return tags
+        for tag in return_tags:
+            cmd += f" -r {tag}"
+        
+        # Create a temporary directory for XML output
+        import tempfile
+        temp_dir = tempfile.mkdtemp(prefix="cfmm2tar_series_xml_")
+        
+        try:
+            # Add XML output options
+            cmd += f" --xml --indent --out-dir {temp_dir}"
+            
+            # Execute the command
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            out, err = proc.communicate()
+            
+            # Check for errors
+            if err:
+                # Ignore the annoying Java info message
+                if (
+                    err != b"Picked up _JAVA_OPTIONS: -Xmx2048m\n"
+                    and err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n"
+                ):
+                    self.logger.error(err)
+            
+            # Find all XML files in the temporary directory
+            xml_files = sorted([f for f in os.listdir(temp_dir) if f.endswith(".dcm")])
+            
+            if not xml_files:
+                self.logger.warning(f"No XML output files found in: {temp_dir}")
+                return []
+            
+            # Parse each XML file (each represents one series)
+            series_list = []
+            for xml_file in xml_files:
+                xml_file_path = os.path.join(temp_dir, xml_file)
+                try:
+                    tree = ET.parse(xml_file_path)
+                    root = tree.getroot()
+                    
+                    series_data = {}
+                    
+                    # Extract attributes from XML
+                    for attr in root.findall(".//DicomAttribute"):
+                        tag = attr.get("tag")
+                        value_elem = attr.find("Value")
+                        
+                        if value_elem is not None and value_elem.text:
+                            value = value_elem.text.strip()
+                            
+                            # Map DICOM tags to field names
+                            if tag == "0020000D":  # StudyInstanceUID
+                                series_data["StudyInstanceUID"] = value
+                            elif tag == "0020000E":  # SeriesInstanceUID
+                                series_data["SeriesInstanceUID"] = value
+                            elif tag == "00200011":  # SeriesNumber
+                                series_data["SeriesNumber"] = value
+                            elif tag == "0008103E":  # SeriesDescription
+                                series_data["SeriesDescription"] = value
+                            elif tag == "00181030":  # ProtocolName
+                                series_data["ProtocolName"] = value
+                            elif tag == "00080060":  # Modality
+                                series_data["Modality"] = value
+                            elif tag == "00180024":  # SequenceName
+                                series_data["SequenceName"] = value
+                            elif tag == "00080008":  # ImageType
+                                # ImageType can have multiple values
+                                all_values = [v.text.strip() for v in attr.findall(".//Value") if v.text]
+                                series_data["ImageType"] = "\\".join(all_values)
+                    
+                    if series_data.get("SeriesInstanceUID"):
+                        # Fill in missing fields with empty strings
+                        for field in ["StudyInstanceUID", "SeriesNumber", "SeriesDescription", 
+                                      "ProtocolName", "Modality", "SequenceName", "ImageType"]:
+                            if field not in series_data:
+                                series_data[field] = ""
+                        series_list.append(series_data)
+                        
+                except ET.ParseError as e:
+                    self.logger.error(f"Error parsing XML file {xml_file}: {e}")
+                    continue
+                except Exception as e:
+                    self.logger.error(f"Error reading XML file {xml_file}: {e}")
+                    continue
+            
+            return series_list
+            
+        finally:
+            # Clean up the temporary directory
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+
     def retrieve_by_StudyInstanceUID(self, StudyInstanceUID, output_dir, timeout_sec=1800):
         """
         retrive dicom file by key StudyInstanceUID. If PACS not ready for retrieving(e.g. console still sending data to PACS), it will keep checking until time out (30 mins)
