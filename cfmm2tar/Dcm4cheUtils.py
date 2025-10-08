@@ -18,6 +18,7 @@ import os
 import shlex
 import subprocess
 import time
+import xml.etree.ElementTree as ET
 
 
 class Dcm4cheUtils:
@@ -78,14 +79,12 @@ class Dcm4cheUtils:
             ...
         """
 
-        # findscu
-
+        # findscu with XML output
         cmd = (
             self._findscu_str
             + f""" {matching_key}"""
             + " -r 00201208"
-            + " |grep -i NumberOfStudyRelatedInstances "
-            + ' |cut -d[ -f 2|cut -d] -f 1 |sed "/^$/d"'
+            + " -X"
         )
 
         out, err, return_code = self._get_stdout_stderr_returncode(cmd)
@@ -96,7 +95,24 @@ class Dcm4cheUtils:
             if err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n":
                 self.logger.error(err)
 
-        instances_str = out.decode("UTF-8")
+        # Parse XML output
+        instances = []
+        try:
+            decoded_out = out.decode("UTF-8")
+            # findscu XML output wraps results in <NativeDicomModel>
+            root = ET.fromstring(decoded_out)
+            
+            # Find all DicomAttribute elements with tag="00201208" (NumberOfStudyRelatedInstances)
+            for attr in root.findall(".//DicomAttribute[@tag='00201208']"):
+                value_elem = attr.find("Value")
+                if value_elem is not None and value_elem.text:
+                    instances.append(value_elem.text.strip())
+        except ET.ParseError as e:
+            self.logger.error(f"Error parsing XML output: {e}")
+        except Exception as e:
+            self.logger.error(f"Error processing XML: {e}")
+
+        instances_str = "\n".join(instances)
         return instances_str
 
     def _ready_for_retrieve(self, matching_key, sleep_sec=2):
@@ -137,13 +153,13 @@ class Dcm4cheUtils:
             list,[StudyInstanceUID1,StudyInstanceUID2,...]
         """
 
-        # findscu --bind DEFAULT --connect CFMM-Public@dicom.cfmm.robarts.ca:11112 -m StudyDescription='Khan*' -m StudyDate='20171116' --tls-aes --user username --user-pass password -r StudyInstanceUID |grep -i 0020,000D |cut -d '[' -f 2 | cut -d ']' -f 1
+        # findscu with XML output
         cmd = (
             self._findscu_str
             + f""" {matching_key} """
             + " -r StudyInstanceUID"
-            + " |grep -i 0020,000D |cut -d[ -f 2 | cut -d] -f 1"
-        )  # grep StudyInstanceUID
+            + " -X"
+        )
         out, err, return_code = self._get_stdout_stderr_returncode(cmd)
 
         # local dcm4che
@@ -152,12 +168,23 @@ class Dcm4cheUtils:
             if err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n":
                 self.logger.error(err)
 
-        StudyInstanceUID_list_temp = out
-
-        # remove empty lines
-        StudyInstanceUID_list = [
-            x.decode("UTF-8") for x in StudyInstanceUID_list_temp.splitlines() if x
-        ]
+        # Parse XML output
+        StudyInstanceUID_list = []
+        try:
+            decoded_out = out.decode("UTF-8")
+            root = ET.fromstring(decoded_out)
+            
+            # Find all DicomAttribute elements with tag="0020000D" (StudyInstanceUID)
+            for attr in root.findall(".//DicomAttribute[@tag='0020000D']"):
+                value_elem = attr.find("Value")
+                if value_elem is not None and value_elem.text:
+                    uid = value_elem.text.strip()
+                    if uid:  # Only add non-empty UIDs
+                        StudyInstanceUID_list.append(uid)
+        except ET.ParseError as e:
+            self.logger.error(f"Error parsing XML output: {e}")
+        except Exception as e:
+            self.logger.error(f"Error processing XML: {e}")
 
         return StudyInstanceUID_list
 
@@ -177,11 +204,7 @@ class Dcm4cheUtils:
                   'PatientID': '...'},
                  ...]
         """
-        import re
-
-        # Request multiple DICOM tags in the query
-        # Note: Not using -X flag as it doesn't produce XML in all versions
-        # Instead, parse the debug output which is more reliable
+        # Request multiple DICOM tags in the query with XML output
         cmd = (
             self._findscu_str
             + f""" {matching_key} """
@@ -190,6 +213,7 @@ class Dcm4cheUtils:
             + " -r StudyDate"
             + " -r StudyDescription"
             + " -r PatientID"
+            + " -X"
         )
 
         out, err, return_code = self._get_stdout_stderr_returncode(cmd)
@@ -201,58 +225,49 @@ class Dcm4cheUtils:
         ):
             self.logger.error(err)
 
-        # Parse the debug output (similar to grep/cut approach used elsewhere)
+        # Parse the XML output
         studies = []
         try:
+            decoded_out = out.decode("UTF-8")
+            root = ET.fromstring(decoded_out)
+            
+            # Each NativeDicomModel represents one study result
+            # The structure groups multiple DicomAttribute elements per study
+            # We need to group them properly
+            
+            # dcm4che XML output wraps each C-FIND response in a separate structure
+            # For findscu, we look for groups of DicomAttribute elements
+            # that together form a complete study
+            
             current_study = {}
-            in_response = False  # Track if we're in a C-FIND-RSP section
-
-            lines = out.decode("UTF-8").split("\n")
-
-            for line in lines:
-                # Track when we enter/exit response sections
-                # Only parse DICOM tags from C-FIND-RSP (responses), not C-FIND-RQ (requests)
-                if "C-FIND-RSP Dataset:" in line:
-                    in_response = True
-                    continue
-                elif "C-FIND-RQ" in line or "C-FIND-RSP[" in line:
-                    in_response = False
-                    continue
-
-                # Only process DICOM tags if we're in a response section
-                if not in_response:
-                    continue
-
-                # Look for lines with DICOM tags in format: (xxxx,xxxx) VR [value] Description
-                # Example: (0020,000D) UI [1.3.12.2.1107...] StudyInstanceUID
-                match = re.match(
-                    r"\(([0-9A-Fa-f]{4}),([0-9A-Fa-f]{4})\)\s+\w+\s+\[([^\]]*)\]\s+(.+)", line
-                )
-                if match:
-                    tag = f"{match.group(1)},{match.group(2)}"
-                    value = match.group(3).strip()
-                    # keyword = match.group(4).strip()  # Not used
-
-                    # Map DICOM tags to our field names
-                    # StudyInstanceUID comes last and marks the end of a study
-                    if tag == "0020,000D":  # StudyInstanceUID
-                        current_study["StudyInstanceUID"] = value
-                        # Save this complete study only if it has a valid StudyInstanceUID
-                        if (
-                            "StudyInstanceUID" in current_study
-                            and current_study["StudyInstanceUID"]
-                        ):
+            
+            # Iterate through all DicomAttribute elements
+            for attr in root.findall(".//DicomAttribute"):
+                tag = attr.get("tag")
+                value_elem = attr.find("Value")
+                
+                if value_elem is not None and value_elem.text:
+                    value = value_elem.text.strip()
+                    
+                    # Map DICOM tags to field names
+                    if tag == "0020000D":  # StudyInstanceUID
+                        # If we already have a study in progress, save it
+                        if current_study.get("StudyInstanceUID"):
                             studies.append(current_study)
-                        # Start fresh for next study
-                        current_study = {}
-                    elif tag == "0010,0010":  # PatientName
+                            current_study = {}
+                        current_study["StudyInstanceUID"] = value
+                    elif tag == "00100010":  # PatientName
                         current_study["PatientName"] = value
-                    elif tag == "0010,0020":  # PatientID
+                    elif tag == "00100020":  # PatientID
                         current_study["PatientID"] = value
-                    elif tag == "0008,0020":  # StudyDate
+                    elif tag == "00080020":  # StudyDate
                         current_study["StudyDate"] = value
-                    elif tag == "0008,1030":  # StudyDescription
+                    elif tag == "00081030":  # StudyDescription
                         current_study["StudyDescription"] = value
+            
+            # Don't forget the last study
+            if current_study.get("StudyInstanceUID"):
+                studies.append(current_study)
 
             # Fill in missing fields with empty strings
             for study in studies:
@@ -260,8 +275,10 @@ class Dcm4cheUtils:
                     if field not in study:
                         study[field] = ""
 
+        except ET.ParseError as e:
+            self.logger.error(f"Error parsing XML output: {e}")
         except Exception as e:
-            self.logger.error(f"Error parsing study metadata: {e}")
+            self.logger.error(f"Error processing XML: {e}")
 
         return studies
 
@@ -270,14 +287,12 @@ class Dcm4cheUtils:
 
         Specifically, find all StudyDescriptions, take the portion before
         the caret, and return each unique value."""
+        
+        # findscu with XML output
         cmd = (
             self._findscu_str
-            + " -r StudyDescription "
-            + "| grep StudyDescription "
-            + "| cut -d[ -f 2 | cut -d] -f 1 "
-            + "| grep . "
-            + "| cut -d^ -f 1 "
-            + "| sort -u"
+            + " -r StudyDescription"
+            + " -X"
         )
 
         out, err, _ = self._get_stdout_stderr_returncode(cmd)
@@ -285,7 +300,30 @@ class Dcm4cheUtils:
         if err and err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n":
             self.logger.error(err)
 
-        return out.splitlines()
+        # Parse XML output
+        pi_names_set = set()
+        try:
+            decoded_out = out.decode("UTF-8")
+            root = ET.fromstring(decoded_out)
+            
+            # Find all DicomAttribute elements with tag="00081030" (StudyDescription)
+            for attr in root.findall(".//DicomAttribute[@tag='00081030']"):
+                value_elem = attr.find("Value")
+                if value_elem is not None and value_elem.text:
+                    study_desc = value_elem.text.strip()
+                    # Take the part before the caret (^)
+                    if study_desc:
+                        pi_name = study_desc.split("^")[0]
+                        if pi_name:  # Only add non-empty PI names
+                            pi_names_set.add(pi_name)
+        except ET.ParseError as e:
+            self.logger.error(f"Error parsing XML output: {e}")
+        except Exception as e:
+            self.logger.error(f"Error processing XML: {e}")
+
+        # Return sorted list as bytes (to match original behavior)
+        pi_names = [name.encode("UTF-8") for name in sorted(pi_names_set)]
+        return pi_names
 
     def retrieve_by_StudyInstanceUID(self, StudyInstanceUID, output_dir, timeout_sec=1800):
         """
