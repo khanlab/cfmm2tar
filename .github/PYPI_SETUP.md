@@ -1,5 +1,9 @@
 # PyPI Publishing Setup
 
+**Note:** This project is no longer published to PyPI. It now uses [pixi](https://pixi.sh) for dependency management instead. This document is kept for historical reference.
+
+---
+
 This document describes how to set up PyPI publishing for the cfmm2tar package.
 
 ## Trusted Publishing (Recommended)

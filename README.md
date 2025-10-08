@@ -4,28 +4,49 @@ Download a tarballed DICOM dataset from the CFMM DICOM server
 
 ## Overview
 
-`cfmm2tar` is a command-line tool for querying and downloading DICOM studies from the CFMM (Centre for Functional and Metabolic Mapping) DICOM server. It provides three flexible deployment options to suit different environments and use cases.
+`cfmm2tar` is a command-line tool for querying and downloading DICOM studies from the CFMM (Centre for Functional and Metabolic Mapping) DICOM server.
 
 ## Installation & Usage
 
-There are **three ways** to run `cfmm2tar`, each with different requirements:
+### Installation with Pixi
 
-### Option 1: Docker Container (Recommended - All-in-One)
+`cfmm2tar` uses [pixi](https://pixi.sh) for dependency management, which automatically handles all dependencies including Python, dcm4che tools, and required libraries.
 
-This is the easiest method as it includes **all dependencies** (Python, dcm4che tools, and DicomRaw utilities) in a single container.
-
-**Requirements:** Docker or Podman
+**Requirements:** 
+- [Pixi](https://pixi.sh) package manager
+- Git
 
 **Installation:**
-```bash
-# Pull from GitHub Container Registry
-docker pull ghcr.io/khanlab/cfmm2tar:latest
 
-# Or build locally
-git clone https://github.com/khanlab/cfmm2tar
-cd cfmm2tar
-docker build -t cfmm2tar .
-```
+1. **Install pixi** (if not already installed):
+   ```bash
+   curl -fsSL https://pixi.sh/install.sh | bash
+   ```
+   
+   Or on Windows:
+   ```powershell
+   iwr -useb https://pixi.sh/install.ps1 | iex
+   ```
+
+2. **Clone the repository:**
+   ```bash
+   git clone https://github.com/khanlab/cfmm2tar
+   cd cfmm2tar
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pixi install
+   ```
+
+4. **Activate the environment:**
+   ```bash
+   # Option 1: Start a shell with the environment activated
+   pixi shell
+   
+   # Option 2: Use pixi shell-hook for automatic activation
+   eval "$(pixi shell-hook)"
+   ```
 
 **Usage:**
 ```bash
@@ -33,103 +54,37 @@ OUTPUT_DIR=/path/to/dir
 mkdir -p ${OUTPUT_DIR}
 
 # Show help
-docker run --rm cfmm2tar --help
+cfmm2tar --help
 
-# Download studies
-docker run -i -t --rm --volume ${OUTPUT_DIR}:/data cfmm2tar -p 'Everling^Marmoset' -d '20180803' /data
+# Download studies for a specific Principal^Project on a specific date
+cfmm2tar -p 'Khan^NeuroAnalytics' -d '20240101' ${OUTPUT_DIR}
+
+# Download all studies on a specific date
+cfmm2tar -d '20170530' ${OUTPUT_DIR}
+
+# Download a specific study by StudyInstanceUID
+cfmm2tar -u '1.2.840.113619.2.55.3.1234567890.123' ${OUTPUT_DIR}
 ```
 
 You will be prompted for your UWO username and password. You can only download datasets to which you have read permissions.
 
-### Option 2: Apptainer/Singularity Container (For HPC Environments)
+**Running without activating the shell:**
 
-Similar to Docker but designed for HPC clusters where Docker may not be available.
-
-**Requirements:** Apptainer (formerly Singularity)
-
-**Installation:**
+You can also run commands directly using `pixi run`:
 ```bash
-# Build from Docker image
-apptainer build cfmm2tar.sif docker://ghcr.io/khanlab/cfmm2tar:latest
-
-# Or build from definition file
-apptainer build cfmm2tar.sif Singularity
+pixi run cfmm2tar -p 'Khan^Project' -d '20240101' ${OUTPUT_DIR}
 ```
 
-**Usage:**
-```bash
-OUTPUT_DIR=/path/to/dir
-mkdir -p ${OUTPUT_DIR}
+## Why Pixi?
 
-# Show help
-apptainer run cfmm2tar.sif --help
+Using pixi provides several advantages:
 
-# Download studies
-apptainer run --bind ${OUTPUT_DIR}:/data cfmm2tar.sif -p 'Khan^Project' -d '20240101' /data
-```
-
-### Option 3: PyPI Installation (For Python Environments)
-
-Install `cfmm2tar` as a Python package. **Note:** This method requires additional setup for dcm4che tools.
-
-**Requirements:** 
-- Python 3.11+
-- **Either** dcm4che tools installed locally **OR** a container with dcm4che tools
-
-**Installation:**
-```bash
-# From PyPI (when published)
-pip install cfmm2tar
-
-# Or install from source
-git clone https://github.com/khanlab/cfmm2tar
-cd cfmm2tar
-pip install -e .
-```
-
-**Setup dcm4che tools:**
-
-You have two options:
-
-#### Option 3a: Install dcm4che locally
-```bash
-export DCM4CHE_VERSION=5.24.1
-sudo bash install_dcm4che_ubuntu.sh /opt
-export PATH=/opt/dcm4che-${DCM4CHE_VERSION}/bin:$PATH
-```
-
-#### Option 3b: Use a dcm4che container
-```bash
-# Pull a container with dcm4che tools
-apptainer pull docker://ghcr.io/khanlab/cfmm2tar:latest
-
-# Set environment variable
-export DCM4CHE_CONTAINER=/path/to/cfmm2tar.sif
-```
-
-**Usage:**
-```bash
-OUTPUT_DIR=/path/to/dir
-mkdir -p ${OUTPUT_DIR}
-
-# If dcm4che tools are in PATH (Option 3a)
-cfmm2tar -p 'Khan^Project' -d '20240101' ${OUTPUT_DIR}
-
-# If using a dcm4che container (Option 3b)
-cfmm2tar --dcm4che-container /path/to/cfmm2tar.sif -p 'Khan^Project' -d '20240101' ${OUTPUT_DIR}
-
-# Or set environment variable
-export DCM4CHE_CONTAINER=/path/to/cfmm2tar.sif
-cfmm2tar -p 'Khan^Project' -d '20240101' ${OUTPUT_DIR}
-```
-
-## Comparison of Methods
-
-| Method | Pros | Cons | Best For |
-|--------|------|------|----------|
-| **Docker Container** | ✅ All dependencies included<br>✅ Consistent environment<br>✅ Easy to use | ❌ Requires Docker | End users, workstations |
-| **Apptainer Container** | ✅ All dependencies included<br>✅ Works on HPC clusters<br>✅ No root required | ❌ Need to build/pull container | HPC environments |
-| **PyPI Install** | ✅ Integrates with Python environment<br>✅ Easy to script | ❌ Requires separate dcm4che setup<br>❌ More complex setup | Python developers, scripting |
+- ✅ **All dependencies included**: Python, dcm4che tools, and all libraries are automatically managed
+- ✅ **Cross-platform**: Works on Linux, macOS, and Windows
+- ✅ **Reproducible environments**: Lock file ensures consistent dependency versions
+- ✅ **No containers needed**: Direct installation on your system
+- ✅ **Easy development**: Simple setup for both users and contributors
+- ✅ **Fast**: Binary packages from conda-forge install quickly
 
 ## Usage
 
@@ -258,7 +213,7 @@ The automatic trust store setup requires:
 - `wget` (for downloading the certificate)
 - `keytool` (part of Java JRE/JDK)
 
-These are included in the Docker and Apptainer containers. For PyPI installations, ensure these tools are available in your environment.
+These are automatically included when using pixi, as the Java runtime is installed as a dependency of dcm4che-tools.
 
 **Note:** If trust store setup fails (e.g., network issues, missing tools), `cfmm2tar` will log a warning but continue to operate. However, TLS connections may fail without a valid trust store.
 
@@ -269,20 +224,21 @@ These are included in the Docker and Apptainer containers. For PyPI installation
 For contributors and developers:
 
 ```bash
+# Install pixi (if not already installed)
+curl -fsSL https://pixi.sh/install.sh | bash
+
 # Clone the repository
 git clone https://github.com/khanlab/cfmm2tar
 cd cfmm2tar
 
-# Install in development mode with dev dependencies
-pip install -e .
-pip install ruff pre-commit pytest pydicom numpy
+# Install dependencies (including dev dependencies)
+pixi install
+
+# Activate the development environment
+pixi shell
 
 # Set up pre-commit hooks (runs quality checks before each commit)
 pre-commit install
-
-# Install dcm4che tools (required for integration tests)
-export DCM4CHE_VERSION=5.24.1
-sudo bash install_dcm4che_ubuntu.sh /opt
 ```
 
 ### Code Quality and Formatting
@@ -308,13 +264,8 @@ pre-commit run --all-files
 This project includes a comprehensive testing framework using a containerized dcm4che PACS instance.
 
 ```bash
-# Install development dependencies
-pip install -e .
-pip install pytest pydicom numpy
-
-# Install dcm4che tools (required for integration tests)
-export DCM4CHE_VERSION=5.24.1
-sudo bash install_dcm4che_ubuntu.sh /opt
+# Activate the pixi environment
+pixi shell
 
 # Run unit tests (no PACS server required)
 pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
@@ -331,14 +282,25 @@ cd tests
 docker compose down -v
 ```
 
+Alternatively, you can run tests using pixi directly without activating the shell:
+
+```bash
+# Run unit tests
+pixi run pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
+
+# Run all tests
+pixi run pytest tests/ -v
+```
+
 See [tests/README.md](tests/README.md) for detailed testing documentation.
 
 ### Continuous Integration
 
 The project uses GitHub Actions for automated testing. The workflow:
-1. Runs unit tests on every push and pull request
-2. Starts a containerized dcm4chee PACS server
-3. Runs integration tests against the PACS server
-4. Reports results
+1. Sets up the pixi environment
+2. Runs unit tests on every push and pull request
+3. Starts a containerized dcm4chee PACS server
+4. Runs integration tests against the PACS server
+5. Reports results
 
 See [.github/workflows/test.yml](.github/workflows/test.yml) for the complete workflow.

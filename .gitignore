@@ -37,3 +37,7 @@ cfmm2tar/_version.py
 # Pre-commit
 .pre-commit-config.yaml.backup
 
+
+# pixi environments
+.pixi
+*.egg-info

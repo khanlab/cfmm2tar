@@ -12,31 +12,24 @@ The testing framework provides:
 
 ## Requirements
 
-- Docker and Docker Compose
-- Python 3.11+
-- pytest
-- dcm4che tools (for integration tests)
+- Docker and Docker Compose (for integration tests)
+- Pixi (for dependency management)
 
 ## Running Tests Locally
 
 ### Install Dependencies
 
 ```bash
-# Install Python dependencies
-uv pip install -e ".[dev]"
+# Install pixi (if not already installed)
+curl -fsSL https://pixi.sh/install.sh | bash
 
-# Or with pip
-pip install -e .
-pip install pytest pydicom numpy
-```
+# Clone the repository and install dependencies
+git clone https://github.com/khanlab/cfmm2tar
+cd cfmm2tar
+pixi install
 
-### Install dcm4che Tools
-
-For integration tests, you need dcm4che tools installed:
-
-```bash
-export DCM4CHE_VERSION=5.24.1
-sudo bash install_dcm4che_ubuntu.sh /opt
+# Activate the environment
+pixi shell
 ```
 
 ### Run Unit Tests Only
@@ -45,6 +38,12 @@ Unit tests don't require a PACS server:
 
 ```bash
 pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
+```
+
+Or without activating the shell:
+
+```bash
+pixi run pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
 ```
 
 ### Run Integration Tests
@@ -59,9 +58,12 @@ docker compose up -d
 # Wait for services to be ready (can take 1-2 minutes)
 sleep 60
 
-# Run integration tests
+# Run integration tests (from project root)
 cd ..
 pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsIntegration -v
+
+# Or using pixi run
+pixi run pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsIntegration -v
 
 # Stop the PACS server
 cd tests
@@ -71,7 +73,11 @@ docker compose down -v
 ### Run All Tests
 
 ```bash
+# From within pixi shell
 pytest tests/ -v
+
+# Or using pixi run
+pixi run pytest tests/ -v
 ```
 
 ## Docker Compose Services
@@ -94,13 +100,12 @@ The `docker-compose.yml` file sets up:
 ## CI/CD
 
 The GitHub Actions workflow (`.github/workflows/test.yml`) automatically:
-1. Sets up the Python environment
-2. Installs dependencies
-3. Installs dcm4che tools
-4. Runs unit tests
-5. Starts the dcm4chee PACS server
-6. Runs integration tests
-7. Cleans up
+1. Sets up the pixi environment
+2. Installs dependencies using pixi
+3. Runs unit tests
+4. Starts the dcm4chee PACS server
+5. Runs integration tests
+6. Cleans up
 
 ## Test Structure
 

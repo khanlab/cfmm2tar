@@ -80,7 +80,6 @@ def main(
     study_instance_uid,
     other_options,
     downloaded_uids_filename,
-    dcm4che_path,
     metadata_tsv_filename="",
     force_refresh_trust_store=False,
 ):
@@ -95,7 +94,6 @@ def main(
         connect,
         uwo_username,
         uwo_password,
-        dcm4che_path,
         other_options,
         force_refresh_trust_store=force_refresh_trust_store,
     )
@@ -259,8 +257,7 @@ if __name__ == "__main__":
                  patient_name \
                  study_instance_uid \
                  other_options \
-                 [downloaded_uids_filename] \
-                 [dcm4che_path]"
+                 [downloaded_uids_filename]"
         )
         sys.exit()
 
@@ -284,13 +281,6 @@ if __name__ == "__main__":
         else:
             downloaded_uids_filename = ""
 
-        if len(sys.argv) > 13:
-            # use dcm4che singularity/docker container runs on host
-            dcm4che_path = sys.argv[13]
-        else:
-            # dcm4che installed on host or singularity container's PATH
-            dcm4che_path = ""
-
         main(
             uwo_username,
             uwo_password,
@@ -304,5 +294,4 @@ if __name__ == "__main__":
             study_instance_uid,
             other_options,
             downloaded_uids_filename,
-            dcm4che_path,
         )
