@@ -6,40 +6,44 @@ Thank you for your interest in contributing to cfmm2tar! This document provides 
 
 ### Prerequisites
 
-- Python 3.11 or higher
+- [Pixi](https://pixi.sh) package manager
 - Docker (for running integration tests)
 - Git
 
 ### Setting Up Your Development Environment
 
-1. **Clone the repository:**
+1. **Install pixi** (if not already installed):
+   ```bash
+   curl -fsSL https://pixi.sh/install.sh | bash
+   ```
+
+2. **Clone the repository:**
    ```bash
    git clone https://github.com/khanlab/cfmm2tar
    cd cfmm2tar
    ```
 
-2. **Install in development mode:**
+3. **Install dependencies (including dev dependencies):**
    ```bash
-   pip install -e .
+   pixi install
    ```
 
-3. **Install development dependencies:**
+4. **Activate the development environment:**
    ```bash
-   pip install ruff pre-commit pytest pydicom numpy
+   pixi shell
+   ```
+   
+   Or use shell-hook for automatic activation:
+   ```bash
+   eval "$(pixi shell-hook)"
    ```
 
-4. **Set up pre-commit hooks:**
+5. **Set up pre-commit hooks:**
    ```bash
    pre-commit install
    ```
    
    This will automatically run code quality checks before each commit.
-
-5. **Install dcm4che tools (for integration tests):**
-   ```bash
-   export DCM4CHE_VERSION=5.24.1
-   sudo bash install_dcm4che_ubuntu.sh /opt
-   ```
 
 ## Code Quality Standards
 
@@ -109,6 +113,9 @@ The hooks include:
 The project includes both unit tests and integration tests:
 
 ```bash
+# Activate the pixi environment
+pixi shell
+
 # Run unit tests only (no PACS server required)
 pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
 
@@ -122,6 +129,16 @@ pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsIntegration -v
 # Clean up
 cd tests
 docker compose down -v
+```
+
+Alternatively, you can run tests using pixi directly:
+
+```bash
+# Run unit tests without activating the shell
+pixi run pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
+
+# Run all tests
+pixi run pytest tests/ -v
 ```
 
 ### Writing Tests
@@ -214,10 +231,10 @@ The tool uses dcm4che command-line utilities:
 
 ### Deployment Methods
 
-The tool supports three deployment methods:
-1. **Docker container**: All dependencies included
-2. **Apptainer container**: For HPC environments
-3. **PyPI installation**: Requires separate dcm4che setup
+The tool is primarily deployed using pixi for dependency management:
+1. **Pixi-based installation**: All dependencies (Python, dcm4che tools, libraries) managed automatically
+2. **Docker container**: Available for containerized environments (legacy support)
+3. **Apptainer container**: For HPC environments (legacy support)
 
 ## Getting Help
 
