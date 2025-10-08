@@ -68,14 +68,14 @@ class Dcm4cheUtils:
     def _execute_findscu_with_xml_output(self, matching_key, return_tags):
         """
         Execute findscu command with XML output to a temporary directory and parse the results.
-        
+
         Without --out-cat, findscu creates one XML file per study (001.dcm, 002.dcm, etc.)
         This method reads all XML files and combines them into a single root element.
-        
+
         Args:
             matching_key: The matching key for the query (e.g., "-m StudyDescription='Khan*'")
             return_tags: List of DICOM tags to return (e.g., ["StudyInstanceUID", "PatientName"])
-        
+
         Returns:
             ET.Element: Root element containing all combined results, or None if parsing fails
         """
@@ -96,7 +96,6 @@ class Dcm4cheUtils:
             # Execute the command
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
             out, err = proc.communicate()
-            return_code = proc.returncode
 
             # Check for errors
             if err:
