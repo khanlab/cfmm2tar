@@ -171,7 +171,7 @@ cfmm2tar --uid-from-file study_metadata_filtered.tsv output_dir
 cfmm2tar --uid-from-file uid_list.txt output_dir
 ```
 
-**Note:** When using a series-level metadata file with `--uid-from-file`, cfmm2tar will download the entire study but only include the specified series in the output metadata (if `--save-metadata` is used). The tar file will still contain all series from the study.
+**Note:** When using a series-level metadata file with `--uid-from-file`, cfmm2tar will download entire studies (as DICOM retrieval operates at the study level). If `--save-metadata` is used, only the specified series will have their metadata written to the output file. To physically exclude series from your dataset, apply filters during downstream processing (e.g., with heudiconv/tar2bids).
 
 ### Track Downloaded Studies
 
