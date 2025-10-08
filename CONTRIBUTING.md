@@ -73,7 +73,7 @@ To create a new release:
 3. The CI/CD workflows will automatically:
    - Build the Python package with the version from the tag
    - Build the Docker container with the version label
-   - Publish to PyPI and container registries
+   - Publish to container registries
 
 ### Linting and Formatting
 
