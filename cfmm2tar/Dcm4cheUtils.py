@@ -67,14 +67,17 @@ class Dcm4cheUtils:
 
     def _execute_findscu_with_xml_output(self, matching_key, return_tags):
         """
-        Execute findscu command with XML output to a temporary directory and parse the result.
+        Execute findscu command with XML output to a temporary directory and parse the results.
+        
+        Without --out-cat, findscu creates one XML file per study (001.dcm, 002.dcm, etc.)
+        This method reads all XML files and combines them into a single root element.
         
         Args:
             matching_key: The matching key for the query (e.g., "-m StudyDescription='Khan*'")
             return_tags: List of DICOM tags to return (e.g., ["StudyInstanceUID", "PatientName"])
         
         Returns:
-            ET.Element: Root element of the parsed XML, or None if parsing fails
+            ET.Element: Root element containing all combined results, or None if parsing fails
         """
         # Create a temporary directory for XML output
         temp_dir = tempfile.mkdtemp(prefix="cfmm2tar_xml_")
@@ -87,8 +90,8 @@ class Dcm4cheUtils:
             for tag in return_tags:
                 cmd += f" -r {tag}"
             
-            # Add XML output options
-            cmd += f" --xml --out-cat --out-dir {temp_dir}"
+            # Add XML output options (without --out-cat so each study gets its own file)
+            cmd += f" --xml --indent --out-dir {temp_dir}"
             
             # Execute the command
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -101,24 +104,36 @@ class Dcm4cheUtils:
                 if err != b"Picked up _JAVA_OPTIONS: -Xmx2048m\n" and err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n":
                     self.logger.error(err)
             
-            # Read the XML file from the temporary directory
-            xml_file_path = os.path.join(temp_dir, "001.dcm")
+            # Find all XML files in the temporary directory (001.dcm, 002.dcm, etc.)
+            xml_files = sorted([f for f in os.listdir(temp_dir) if f.endswith('.dcm')])
             
-            if not os.path.exists(xml_file_path):
-                self.logger.warning(f"XML output file not found: {xml_file_path}")
+            if not xml_files:
+                self.logger.warning(f"No XML output files found in: {temp_dir}")
                 return None
             
-            # Parse the XML file
-            try:
-                tree = ET.parse(xml_file_path)
-                root = tree.getroot()
-                return root
-            except ET.ParseError as e:
-                self.logger.error(f"Error parsing XML file: {e}")
-                return None
-            except Exception as e:
-                self.logger.error(f"Error reading XML file: {e}")
-                return None
+            # Create a root element to combine all results
+            combined_root = ET.Element("NativeDicomModel")
+            combined_root.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+            
+            # Parse each XML file and combine the DicomAttribute elements
+            for xml_file in xml_files:
+                xml_file_path = os.path.join(temp_dir, xml_file)
+                try:
+                    tree = ET.parse(xml_file_path)
+                    root = tree.getroot()
+                    
+                    # Add all DicomAttribute elements from this file to the combined root
+                    for attr in root.findall(".//DicomAttribute"):
+                        combined_root.append(attr)
+                        
+                except ET.ParseError as e:
+                    self.logger.error(f"Error parsing XML file {xml_file}: {e}")
+                    continue
+                except Exception as e:
+                    self.logger.error(f"Error reading XML file {xml_file}: {e}")
+                    continue
+            
+            return combined_root
                 
         finally:
             # Clean up the temporary directory
