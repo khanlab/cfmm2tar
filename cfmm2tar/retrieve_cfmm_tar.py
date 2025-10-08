@@ -82,6 +82,7 @@ def main(
     downloaded_uids_filename,
     dcm4che_path,
     metadata_tsv_filename="",
+    force_refresh_trust_store=False,
 ):
     """
     main workflow: for each study: query,retrieve,tar
@@ -91,7 +92,12 @@ def main(
 
     # Dcm4cheUtils
     cfmm_dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
-        connect, uwo_username, uwo_password, dcm4che_path, other_options
+        connect,
+        uwo_username,
+        uwo_password,
+        dcm4che_path,
+        other_options,
+        force_refresh_trust_store=force_refresh_trust_store,
     )
 
     if study_instance_uid == "*":

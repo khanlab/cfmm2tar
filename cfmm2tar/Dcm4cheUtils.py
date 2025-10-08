@@ -22,24 +22,48 @@ import tempfile
 import time
 import xml.etree.ElementTree as ET
 
+from . import truststore
+
 
 class Dcm4cheUtils:
     """
     dcm4che utils
     """
 
-    def __init__(self, connect, username, password, dcm4che_path="", other_options=""):
+    def __init__(
+        self,
+        connect,
+        username,
+        password,
+        dcm4che_path="",
+        other_options="",
+        trust_store_cache_dir=None,
+        force_refresh_trust_store=False,
+    ):
         self.logger = logging.getLogger(__name__)
         self.connect = connect
         self.username = username
         self.password = password
         self.dcm4che_path = dcm4che_path
 
+        # Get trust store option (will create/cache if needed)
+        try:
+            trust_store_option = truststore.get_truststore_option(
+                cache_dir=trust_store_cache_dir, force_refresh=force_refresh_trust_store
+            )
+            self.logger.info(f"Using trust store option: {trust_store_option}")
+        except Exception as e:
+            self.logger.warning(
+                f"Failed to setup trust store: {e}. Continuing without --trust-store option."
+            )
+            trust_store_option = ""
+
         self._findscu_str = (
             f"""{self.dcm4che_path} findscu"""
             + " --bind  DEFAULT --tls-aes "
             + f" --connect {self.connect}"
             + " --accept-timeout 10000 "
+            + f" {trust_store_option} "
             + f" {other_options} "
             + f""" --user {shlex.quote(self.username)} """
             + f""" --user-pass {shlex.quote(self.password)} """
@@ -50,6 +74,7 @@ class Dcm4cheUtils:
             + " --bind  DEFAULT --tls-aes "
             + f" --connect {self.connect} "
             + " --accept-timeout 10000 "
+            + f" {trust_store_option} "
             + f" {other_options} "
             + f""" --user {shlex.quote(self.username)} """
             + f""" --user-pass {shlex.quote(self.password)} """

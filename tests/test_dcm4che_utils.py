@@ -3,6 +3,7 @@ Integration tests for Dcm4cheUtils with containerized dcm4che PACS server.
 """
 
 import pytest
+from unittest.mock import patch
 
 from cfmm2tar import Dcm4cheUtils
 
@@ -97,6 +98,13 @@ class TestDcm4cheUtilsIntegration:
 class TestDcm4cheUtilsUnit:
     """Unit tests for Dcm4cheUtils class that don't require a PACS server."""
 
+    @pytest.fixture(autouse=True)
+    def mock_truststore(self):
+        """Automatically mock truststore for all unit tests."""
+        with patch("cfmm2tar.Dcm4cheUtils.truststore.get_truststore_option") as mock:
+            mock.return_value = "--trust-store /path/to/truststore.jks"
+            yield mock
+
     def test_init_with_credentials(self):
         """Test initialization with credentials."""
         dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
@@ -111,6 +119,7 @@ class TestDcm4cheUtilsUnit:
         assert dcm4che_utils.username == "testuser"
         assert dcm4che_utils.password == "testpass"
         assert "--tls-aes" in dcm4che_utils._findscu_str
+        assert "--trust-store" in dcm4che_utils._findscu_str
 
     def test_init_with_docker_path(self):
         """Test initialization with docker container path."""
@@ -124,6 +133,8 @@ class TestDcm4cheUtilsUnit:
 
         assert "docker run --rm dcm4che/dcm4che-tools:5.24.1" in dcm4che_utils._findscu_str
         assert "docker run --rm dcm4che/dcm4che-tools:5.24.1" in dcm4che_utils._getscu_str
+        assert "--trust-store" in dcm4che_utils._findscu_str
+        assert "--trust-store" in dcm4che_utils._getscu_str
 
     def test_xml_parsing_study_uids(self):
         """Test parsing StudyInstanceUIDs from XML output."""
