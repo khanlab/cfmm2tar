@@ -131,6 +131,12 @@ Examples:
         default=os.environ.get("DCM4CHE_CONTAINER", ""),
         help="Path to the dcm4che singularity/apptainer container (default: from DCM4CHE_CONTAINER env var, or no container)",
     )
+    parser.add_argument(
+        "--refresh-trust-store",
+        dest="refresh_trust_store",
+        action="store_true",
+        help="Force refresh the cached JKS trust store used for TLS connections",
+    )
 
     # Search options
     parser.add_argument(
@@ -188,7 +194,12 @@ Examples:
         # Create dcm4che utils instance
         dcm4che_path = f"apptainer exec {args.dcm4che_container}" if args.dcm4che_container else ""
         cfmm_dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
-            args.dicom_connection, username, password, dcm4che_path, args.other_options
+            args.dicom_connection,
+            username,
+            password,
+            dcm4che_path,
+            args.other_options,
+            force_refresh_trust_store=args.refresh_trust_store,
         )
 
         # Build matching key
@@ -311,6 +322,7 @@ Examples:
                     downloaded_uids_filename=downloaded_uid_list,
                     dcm4che_path=f"apptainer exec {args.dcm4che_container}",
                     metadata_tsv_filename=args.save_metadata,
+                    force_refresh_trust_store=args.refresh_trust_store,
                 )
         else:
             # Normal mode - use search criteria
@@ -329,6 +341,7 @@ Examples:
                 downloaded_uids_filename=downloaded_uid_list,
                 dcm4che_path=f"apptainer exec {args.dcm4che_container}",
                 metadata_tsv_filename=args.save_metadata,
+                force_refresh_trust_store=args.refresh_trust_store,
             )
 
         # Clean up intermediate directory if empty

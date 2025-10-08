@@ -212,6 +212,56 @@ This workflow is especially useful when:
 - You're sharing the metadata with collaborators to decide what to download
 - You need to filter studies based on multiple criteria
 
+## TLS Certificate Management
+
+When connecting to the CFMM DICOM server, `cfmm2tar` requires a valid TLS certificate trust store for secure communication. The tool automatically handles certificate management for you.
+
+### Automatic Trust Store Setup
+
+`cfmm2tar` automatically:
+1. Downloads the UWO Sectigo certificate from the institutional PKI server
+2. Creates a JKS (Java KeyStore) trust store file using `keytool`
+3. Caches the trust store in `~/.cfmm2tar/mytruststore.jks` for future use
+4. Adds the `--trust-store` option to all dcm4che commands
+
+This happens transparently on first use - no manual setup required!
+
+### Refreshing the Trust Store
+
+If the certificate expires or you need to refresh the cached trust store:
+
+```bash
+# Force refresh the trust store
+cfmm2tar --refresh-trust-store -p 'Khan^NeuroAnalytics' output_dir
+
+# The trust store will be automatically refreshed before downloading
+```
+
+### Manual Trust Store Management
+
+For advanced users or troubleshooting:
+
+```python
+from cfmm2tar import truststore
+
+# Get the default trust store path
+path = truststore.get_truststore_path()
+print(f"Trust store location: {path}")
+
+# Force creation/refresh of trust store
+truststore.ensure_truststore(force_refresh=True)
+```
+
+### Requirements
+
+The automatic trust store setup requires:
+- `wget` (for downloading the certificate)
+- `keytool` (part of Java JRE/JDK)
+
+These are included in the Docker and Apptainer containers. For PyPI installations, ensure these tools are available in your environment.
+
+**Note:** If trust store setup fails (e.g., network issues, missing tools), `cfmm2tar` will log a warning but continue to operate. However, TLS connections may fail without a valid trust store.
+
 ## Development and Testing
 
 ### Development Setup
