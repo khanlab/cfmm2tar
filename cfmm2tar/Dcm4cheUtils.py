@@ -35,7 +35,6 @@ class Dcm4cheUtils:
         connect,
         username,
         password,
-        dcm4che_path="",
         other_options="",
         trust_store_cache_dir=None,
         force_refresh_trust_store=False,
@@ -44,7 +43,6 @@ class Dcm4cheUtils:
         self.connect = connect
         self.username = username
         self.password = password
-        self.dcm4che_path = dcm4che_path
 
         # Get trust store option (will create/cache if needed)
         try:
@@ -59,7 +57,7 @@ class Dcm4cheUtils:
             trust_store_option = ""
 
         self._findscu_str = (
-            f"""{self.dcm4che_path} findscu"""
+            """findscu"""
             + " --bind  DEFAULT --tls-aes "
             + f" --connect {self.connect}"
             + " --accept-timeout 10000 "
@@ -70,7 +68,7 @@ class Dcm4cheUtils:
         )
 
         self._getscu_str = (
-            f"""{self.dcm4che_path} getscu"""
+            """getscu"""
             + " --bind  DEFAULT --tls-aes "
             + f" --connect {self.connect} "
             + " --accept-timeout 10000 "
@@ -174,8 +172,6 @@ class Dcm4cheUtils:
         input:
             matching_key:
                 example: -m StudyDescription='Khan*' -m StudyDate='20171116'
-            dcm4che_path:
-                default is '', can be a docker/singularity container
 
         output:string
             StudyInstanceUID1\n
