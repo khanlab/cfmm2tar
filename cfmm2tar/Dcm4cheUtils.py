@@ -100,11 +100,14 @@ class Dcm4cheUtils:
             # Check for errors
             if err:
                 # Ignore the annoying Java info message
-                if err != b"Picked up _JAVA_OPTIONS: -Xmx2048m\n" and err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n":
+                if (
+                    err != b"Picked up _JAVA_OPTIONS: -Xmx2048m\n"
+                    and err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n"
+                ):
                     self.logger.error(err)
 
             # Find all XML files in the temporary directory (001.dcm, 002.dcm, etc.)
-            xml_files = sorted([f for f in os.listdir(temp_dir) if f.endswith('.dcm')])
+            xml_files = sorted([f for f in os.listdir(temp_dir) if f.endswith(".dcm")])
 
             if not xml_files:
                 self.logger.warning(f"No XML output files found in: {temp_dir}")
@@ -247,7 +250,13 @@ class Dcm4cheUtils:
                  ...]
         """
         # Execute findscu with XML output to file
-        return_tags = ["StudyInstanceUID", "PatientName", "StudyDate", "StudyDescription", "PatientID"]
+        return_tags = [
+            "StudyInstanceUID",
+            "PatientName",
+            "StudyDate",
+            "StudyDescription",
+            "PatientID",
+        ]
         root = self._execute_findscu_with_xml_output(matching_key, return_tags)
 
         # Parse the XML output
