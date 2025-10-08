@@ -13,6 +13,8 @@ note:
 
 import logging
 import os
+import shutil
+import tempfile
 
 # for quote python strings for safe use in posix shells
 import shlex
@@ -63,6 +65,66 @@ class Dcm4cheUtils:
 
         return out, err, return_code
 
+    def _execute_findscu_with_xml_output(self, matching_key, return_tags):
+        """
+        Execute findscu command with XML output to a temporary directory and parse the result.
+        
+        Args:
+            matching_key: The matching key for the query (e.g., "-m StudyDescription='Khan*'")
+            return_tags: List of DICOM tags to return (e.g., ["StudyInstanceUID", "PatientName"])
+        
+        Returns:
+            ET.Element: Root element of the parsed XML, or None if parsing fails
+        """
+        # Create a temporary directory for XML output
+        temp_dir = tempfile.mkdtemp(prefix="cfmm2tar_xml_")
+        
+        try:
+            # Build the findscu command with XML output to file
+            cmd = self._findscu_str + f""" {matching_key}"""
+            
+            # Add return tags
+            for tag in return_tags:
+                cmd += f" -r {tag}"
+            
+            # Add XML output options
+            cmd += f" --xml --out-cat --out-dir {temp_dir}"
+            
+            # Execute the command
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            out, err = proc.communicate()
+            return_code = proc.returncode
+            
+            # Check for errors
+            if err:
+                # Ignore the annoying Java info message
+                if err != b"Picked up _JAVA_OPTIONS: -Xmx2048m\n" and err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n":
+                    self.logger.error(err)
+            
+            # Read the XML file from the temporary directory
+            xml_file_path = os.path.join(temp_dir, "001.dcm")
+            
+            if not os.path.exists(xml_file_path):
+                self.logger.warning(f"XML output file not found: {xml_file_path}")
+                return None
+            
+            # Parse the XML file
+            try:
+                tree = ET.parse(xml_file_path)
+                root = tree.getroot()
+                return root
+            except ET.ParseError as e:
+                self.logger.error(f"Error parsing XML file: {e}")
+                return None
+            except Exception as e:
+                self.logger.error(f"Error reading XML file: {e}")
+                return None
+                
+        finally:
+            # Clean up the temporary directory
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+
     def _get_NumberOfStudyRelatedInstances(self, matching_key):
         """
         get StudyInstanceUID list by matching key
@@ -79,33 +141,20 @@ class Dcm4cheUtils:
             ...
         """
 
-        # findscu with XML output
-        cmd = self._findscu_str + f""" {matching_key}""" + " -r 00201208" + " -X"
-
-        out, err, return_code = self._get_stdout_stderr_returncode(cmd)
-
-        # local dcm4che
-        if err:
-            # no output of the annonying docker's dcm4che's java info
-            if err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n":
-                self.logger.error(err)
-
+        # Execute findscu with XML output to file
+        root = self._execute_findscu_with_xml_output(matching_key, ["00201208"])
+        
         # Parse XML output
         instances = []
-        try:
-            decoded_out = out.decode("UTF-8")
-            # findscu XML output wraps results in <NativeDicomModel>
-            root = ET.fromstring(decoded_out)
-
-            # Find all DicomAttribute elements with tag="00201208" (NumberOfStudyRelatedInstances)
-            for attr in root.findall(".//DicomAttribute[@tag='00201208']"):
-                value_elem = attr.find("Value")
-                if value_elem is not None and value_elem.text:
-                    instances.append(value_elem.text.strip())
-        except ET.ParseError as e:
-            self.logger.error(f"Error parsing XML output: {e}")
-        except Exception as e:
-            self.logger.error(f"Error processing XML: {e}")
+        if root is not None:
+            try:
+                # Find all DicomAttribute elements with tag="00201208" (NumberOfStudyRelatedInstances)
+                for attr in root.findall(".//DicomAttribute[@tag='00201208']"):
+                    value_elem = attr.find("Value")
+                    if value_elem is not None and value_elem.text:
+                        instances.append(value_elem.text.strip())
+            except Exception as e:
+                self.logger.error(f"Error processing XML: {e}")
 
         instances_str = "\n".join(instances)
         return instances_str
@@ -148,33 +197,22 @@ class Dcm4cheUtils:
             list,[StudyInstanceUID1,StudyInstanceUID2,...]
         """
 
-        # findscu with XML output
-        cmd = self._findscu_str + f""" {matching_key} """ + " -r StudyInstanceUID" + " -X"
-        out, err, return_code = self._get_stdout_stderr_returncode(cmd)
-
-        # local dcm4che
-        if err:
-            # no output of the annonying docker dcm4che's java info
-            if err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n":
-                self.logger.error(err)
-
+        # Execute findscu with XML output to file
+        root = self._execute_findscu_with_xml_output(matching_key, ["StudyInstanceUID"])
+        
         # Parse XML output
         StudyInstanceUID_list = []
-        try:
-            decoded_out = out.decode("UTF-8")
-            root = ET.fromstring(decoded_out)
-
-            # Find all DicomAttribute elements with tag="0020000D" (StudyInstanceUID)
-            for attr in root.findall(".//DicomAttribute[@tag='0020000D']"):
-                value_elem = attr.find("Value")
-                if value_elem is not None and value_elem.text:
-                    uid = value_elem.text.strip()
-                    if uid:  # Only add non-empty UIDs
-                        StudyInstanceUID_list.append(uid)
-        except ET.ParseError as e:
-            self.logger.error(f"Error parsing XML output: {e}")
-        except Exception as e:
-            self.logger.error(f"Error processing XML: {e}")
+        if root is not None:
+            try:
+                # Find all DicomAttribute elements with tag="0020000D" (StudyInstanceUID)
+                for attr in root.findall(".//DicomAttribute[@tag='0020000D']"):
+                    value_elem = attr.find("Value")
+                    if value_elem is not None and value_elem.text:
+                        uid = value_elem.text.strip()
+                        if uid:  # Only add non-empty UIDs
+                            StudyInstanceUID_list.append(uid)
+            except Exception as e:
+                self.logger.error(f"Error processing XML: {e}")
 
         return StudyInstanceUID_list
 
@@ -194,81 +232,60 @@ class Dcm4cheUtils:
                   'PatientID': '...'},
                  ...]
         """
-        # Request multiple DICOM tags in the query with XML output
-        cmd = (
-            self._findscu_str
-            + f""" {matching_key} """
-            + " -r StudyInstanceUID"
-            + " -r PatientName"
-            + " -r StudyDate"
-            + " -r StudyDescription"
-            + " -r PatientID"
-            + " -X"
-        )
-
-        out, err, return_code = self._get_stdout_stderr_returncode(cmd)
-
-        if (
-            err
-            and err != b"Picked up _JAVA_OPTIONS: -Xmx2048m\n"
-            and err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n"
-        ):
-            self.logger.error(err)
+        # Execute findscu with XML output to file
+        return_tags = ["StudyInstanceUID", "PatientName", "StudyDate", "StudyDescription", "PatientID"]
+        root = self._execute_findscu_with_xml_output(matching_key, return_tags)
 
         # Parse the XML output
         studies = []
-        try:
-            decoded_out = out.decode("UTF-8")
-            root = ET.fromstring(decoded_out)
+        if root is not None:
+            try:
+                # Each NativeDicomModel represents one study result
+                # The structure groups multiple DicomAttribute elements per study
+                # We need to group them properly
 
-            # Each NativeDicomModel represents one study result
-            # The structure groups multiple DicomAttribute elements per study
-            # We need to group them properly
+                # dcm4che XML output wraps each C-FIND response in a separate structure
+                # For findscu, we look for groups of DicomAttribute elements
+                # that together form a complete study
 
-            # dcm4che XML output wraps each C-FIND response in a separate structure
-            # For findscu, we look for groups of DicomAttribute elements
-            # that together form a complete study
+                current_study = {}
 
-            current_study = {}
+                # Iterate through all DicomAttribute elements
+                for attr in root.findall(".//DicomAttribute"):
+                    tag = attr.get("tag")
+                    value_elem = attr.find("Value")
 
-            # Iterate through all DicomAttribute elements
-            for attr in root.findall(".//DicomAttribute"):
-                tag = attr.get("tag")
-                value_elem = attr.find("Value")
+                    if value_elem is not None and value_elem.text:
+                        value = value_elem.text.strip()
 
-                if value_elem is not None and value_elem.text:
-                    value = value_elem.text.strip()
+                        # Map DICOM tags to field names
+                        if tag == "0020000D":  # StudyInstanceUID
+                            # If we already have a study in progress, save it
+                            if current_study.get("StudyInstanceUID"):
+                                studies.append(current_study)
+                                current_study = {}
+                            current_study["StudyInstanceUID"] = value
+                        elif tag == "00100010":  # PatientName
+                            current_study["PatientName"] = value
+                        elif tag == "00100020":  # PatientID
+                            current_study["PatientID"] = value
+                        elif tag == "00080020":  # StudyDate
+                            current_study["StudyDate"] = value
+                        elif tag == "00081030":  # StudyDescription
+                            current_study["StudyDescription"] = value
 
-                    # Map DICOM tags to field names
-                    if tag == "0020000D":  # StudyInstanceUID
-                        # If we already have a study in progress, save it
-                        if current_study.get("StudyInstanceUID"):
-                            studies.append(current_study)
-                            current_study = {}
-                        current_study["StudyInstanceUID"] = value
-                    elif tag == "00100010":  # PatientName
-                        current_study["PatientName"] = value
-                    elif tag == "00100020":  # PatientID
-                        current_study["PatientID"] = value
-                    elif tag == "00080020":  # StudyDate
-                        current_study["StudyDate"] = value
-                    elif tag == "00081030":  # StudyDescription
-                        current_study["StudyDescription"] = value
+                # Don't forget the last study
+                if current_study.get("StudyInstanceUID"):
+                    studies.append(current_study)
 
-            # Don't forget the last study
-            if current_study.get("StudyInstanceUID"):
-                studies.append(current_study)
+                # Fill in missing fields with empty strings
+                for study in studies:
+                    for field in ["PatientName", "PatientID", "StudyDate", "StudyDescription"]:
+                        if field not in study:
+                            study[field] = ""
 
-            # Fill in missing fields with empty strings
-            for study in studies:
-                for field in ["PatientName", "PatientID", "StudyDate", "StudyDescription"]:
-                    if field not in study:
-                        study[field] = ""
-
-        except ET.ParseError as e:
-            self.logger.error(f"Error parsing XML output: {e}")
-        except Exception as e:
-            self.logger.error(f"Error processing XML: {e}")
+            except Exception as e:
+                self.logger.error(f"Error processing XML: {e}")
 
         return studies
 
@@ -278,34 +295,25 @@ class Dcm4cheUtils:
         Specifically, find all StudyDescriptions, take the portion before
         the caret, and return each unique value."""
 
-        # findscu with XML output
-        cmd = self._findscu_str + " -r StudyDescription" + " -X"
-
-        out, err, _ = self._get_stdout_stderr_returncode(cmd)
-
-        if err and err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n":
-            self.logger.error(err)
+        # Execute findscu with XML output to file
+        root = self._execute_findscu_with_xml_output("", ["StudyDescription"])
 
         # Parse XML output
         pi_names_set = set()
-        try:
-            decoded_out = out.decode("UTF-8")
-            root = ET.fromstring(decoded_out)
-
-            # Find all DicomAttribute elements with tag="00081030" (StudyDescription)
-            for attr in root.findall(".//DicomAttribute[@tag='00081030']"):
-                value_elem = attr.find("Value")
-                if value_elem is not None and value_elem.text:
-                    study_desc = value_elem.text.strip()
-                    # Take the part before the caret (^)
-                    if study_desc:
-                        pi_name = study_desc.split("^")[0]
-                        if pi_name:  # Only add non-empty PI names
-                            pi_names_set.add(pi_name)
-        except ET.ParseError as e:
-            self.logger.error(f"Error parsing XML output: {e}")
-        except Exception as e:
-            self.logger.error(f"Error processing XML: {e}")
+        if root is not None:
+            try:
+                # Find all DicomAttribute elements with tag="00081030" (StudyDescription)
+                for attr in root.findall(".//DicomAttribute[@tag='00081030']"):
+                    value_elem = attr.find("Value")
+                    if value_elem is not None and value_elem.text:
+                        study_desc = value_elem.text.strip()
+                        # Take the part before the caret (^)
+                        if study_desc:
+                            pi_name = study_desc.split("^")[0]
+                            if pi_name:  # Only add non-empty PI names
+                                pi_names_set.add(pi_name)
+            except Exception as e:
+                self.logger.error(f"Error processing XML: {e}")
 
         # Return sorted list as bytes (to match original behavior)
         pi_names = [name.encode("UTF-8") for name in sorted(pi_names_set)]

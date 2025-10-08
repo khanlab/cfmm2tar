@@ -128,6 +128,7 @@ class TestDcm4cheUtilsUnit:
     def test_xml_parsing_study_uids(self):
         """Test parsing StudyInstanceUIDs from XML output."""
         from unittest.mock import patch
+        import xml.etree.ElementTree as ET
 
         dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
             connect="TEST@localhost:11112",
@@ -136,16 +137,17 @@ class TestDcm4cheUtilsUnit:
         )
 
         # Mock XML response
-        mock_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <NativeDicomModel xml:space="preserve">
   <DicomAttribute tag="0020000D" vr="UI">
     <Value number="1">1.2.3.4.5.6.7.8.9</Value>
   </DicomAttribute>
 </NativeDicomModel>
 """
+        mock_root = ET.fromstring(mock_xml)
 
         with patch.object(
-            dcm4che_utils, "_get_stdout_stderr_returncode", return_value=(mock_xml, b"", 0)
+            dcm4che_utils, "_execute_findscu_with_xml_output", return_value=mock_root
         ):
             result = dcm4che_utils.get_StudyInstanceUID_by_matching_key("-m StudyDate='*'")
             assert len(result) == 1
@@ -154,6 +156,7 @@ class TestDcm4cheUtilsUnit:
     def test_xml_parsing_multiple_study_uids(self):
         """Test parsing multiple StudyInstanceUIDs from XML output."""
         from unittest.mock import patch
+        import xml.etree.ElementTree as ET
 
         dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
             connect="TEST@localhost:11112",
@@ -162,7 +165,7 @@ class TestDcm4cheUtilsUnit:
         )
 
         # Mock XML response with multiple studies
-        mock_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <NativeDicomModel xml:space="preserve">
   <DicomAttribute tag="0020000D" vr="UI">
     <Value number="1">1.2.3.4.5.6.7.8.9</Value>
@@ -172,9 +175,10 @@ class TestDcm4cheUtilsUnit:
   </DicomAttribute>
 </NativeDicomModel>
 """
+        mock_root = ET.fromstring(mock_xml)
 
         with patch.object(
-            dcm4che_utils, "_get_stdout_stderr_returncode", return_value=(mock_xml, b"", 0)
+            dcm4che_utils, "_execute_findscu_with_xml_output", return_value=mock_root
         ):
             result = dcm4che_utils.get_StudyInstanceUID_by_matching_key("-m StudyDate='*'")
             assert len(result) == 2
@@ -184,6 +188,7 @@ class TestDcm4cheUtilsUnit:
     def test_xml_parsing_pi_names(self):
         """Test parsing PI names from StudyDescription XML output."""
         from unittest.mock import patch
+        import xml.etree.ElementTree as ET
 
         dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
             connect="TEST@localhost:11112",
@@ -192,7 +197,7 @@ class TestDcm4cheUtilsUnit:
         )
 
         # Mock XML response with StudyDescriptions
-        mock_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <NativeDicomModel xml:space="preserve">
   <DicomAttribute tag="00081030" vr="LO">
     <Value number="1">Khan^Project1</Value>
@@ -205,9 +210,10 @@ class TestDcm4cheUtilsUnit:
   </DicomAttribute>
 </NativeDicomModel>
 """
+        mock_root = ET.fromstring(mock_xml)
 
         with patch.object(
-            dcm4che_utils, "_get_stdout_stderr_returncode", return_value=(mock_xml, b"", 0)
+            dcm4che_utils, "_execute_findscu_with_xml_output", return_value=mock_root
         ):
             result = dcm4che_utils.get_all_pi_names()
             # Result should be sorted list of unique PI names as bytes
@@ -218,6 +224,7 @@ class TestDcm4cheUtilsUnit:
     def test_xml_parsing_study_metadata(self):
         """Test parsing complete study metadata from XML output."""
         from unittest.mock import patch
+        import xml.etree.ElementTree as ET
 
         dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
             connect="TEST@localhost:11112",
@@ -226,7 +233,7 @@ class TestDcm4cheUtilsUnit:
         )
 
         # Mock XML response with complete study metadata
-        mock_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <NativeDicomModel xml:space="preserve">
   <DicomAttribute tag="00100010" vr="PN">
     <Value number="1">Test^Patient</Value>
@@ -245,9 +252,10 @@ class TestDcm4cheUtilsUnit:
   </DicomAttribute>
 </NativeDicomModel>
 """
+        mock_root = ET.fromstring(mock_xml)
 
         with patch.object(
-            dcm4che_utils, "_get_stdout_stderr_returncode", return_value=(mock_xml, b"", 0)
+            dcm4che_utils, "_execute_findscu_with_xml_output", return_value=mock_root
         ):
             result = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
             assert len(result) == 1
@@ -261,6 +269,7 @@ class TestDcm4cheUtilsUnit:
     def test_xml_parsing_number_of_instances(self):
         """Test parsing NumberOfStudyRelatedInstances from XML output."""
         from unittest.mock import patch
+        import xml.etree.ElementTree as ET
 
         dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
             connect="TEST@localhost:11112",
@@ -269,16 +278,17 @@ class TestDcm4cheUtilsUnit:
         )
 
         # Mock XML response with NumberOfStudyRelatedInstances
-        mock_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <NativeDicomModel xml:space="preserve">
   <DicomAttribute tag="00201208" vr="IS">
     <Value number="1">100</Value>
   </DicomAttribute>
 </NativeDicomModel>
 """
+        mock_root = ET.fromstring(mock_xml)
 
         with patch.object(
-            dcm4che_utils, "_get_stdout_stderr_returncode", return_value=(mock_xml, b"", 0)
+            dcm4che_utils, "_execute_findscu_with_xml_output", return_value=mock_root
         ):
             result = dcm4che_utils._get_NumberOfStudyRelatedInstances("-m StudyDate='*'")
             assert result == "100"
@@ -286,6 +296,7 @@ class TestDcm4cheUtilsUnit:
     def test_xml_parsing_empty_response(self):
         """Test handling of empty XML response."""
         from unittest.mock import patch
+        import xml.etree.ElementTree as ET
 
         dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
             connect="TEST@localhost:11112",
@@ -294,13 +305,14 @@ class TestDcm4cheUtilsUnit:
         )
 
         # Mock empty XML response
-        mock_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <NativeDicomModel xml:space="preserve">
 </NativeDicomModel>
 """
+        mock_root = ET.fromstring(mock_xml)
 
         with patch.object(
-            dcm4che_utils, "_get_stdout_stderr_returncode", return_value=(mock_xml, b"", 0)
+            dcm4che_utils, "_execute_findscu_with_xml_output", return_value=mock_root
         ):
             # Test with empty results for each method
             uids = dcm4che_utils.get_StudyInstanceUID_by_matching_key("-m StudyDate='*'")
