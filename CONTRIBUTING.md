@@ -62,19 +62,11 @@ This project uses dynamic versioning based on git tags:
 
 To create a new release:
 
-1. Tag the commit with a version number:
-   ```bash
-   git tag v2.1.0
-   git push origin v2.1.0
-   ```
+1. Create a GitHub release
 
-2. Create a GitHub release from the tag (or the workflow will create one automatically)
-
-3. The CI/CD workflows will automatically:
-   - Build the Python package with the version from the tag
-   - Build the Docker container with the version label
-   - Publish to container registries
-
+2. The CI/CD workflows will automatically:
+   - TODO: Build the conda package
+   
 ### Linting and Formatting
 
 We use [ruff](https://github.com/astral-sh/ruff) for both linting and formatting:
@@ -231,10 +223,7 @@ The tool uses dcm4che command-line utilities:
 
 ### Deployment Methods
 
-The tool is primarily deployed using pixi for dependency management:
-1. **Pixi-based installation**: All dependencies (Python, dcm4che tools, libraries) managed automatically
-2. **Docker container**: Available for containerized environments (legacy support)
-3. **Apptainer container**: For HPC environments (legacy support)
+The tool is primarily deployed using pixi for dependency management. All dependencies (Python, dcm4che tools, libraries) managed automatically
 
 ## Getting Help
 
