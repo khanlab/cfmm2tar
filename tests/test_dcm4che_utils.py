@@ -127,8 +127,8 @@ class TestDcm4cheUtilsUnit:
 
     def test_xml_parsing_study_uids(self):
         """Test parsing StudyInstanceUIDs from XML output."""
-        from unittest.mock import patch
         import xml.etree.ElementTree as ET
+        from unittest.mock import patch
 
         dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
             connect="TEST@localhost:11112",
@@ -155,8 +155,8 @@ class TestDcm4cheUtilsUnit:
 
     def test_xml_parsing_multiple_study_uids(self):
         """Test parsing multiple StudyInstanceUIDs from XML output."""
-        from unittest.mock import patch
         import xml.etree.ElementTree as ET
+        from unittest.mock import patch
 
         dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
             connect="TEST@localhost:11112",
@@ -187,8 +187,8 @@ class TestDcm4cheUtilsUnit:
 
     def test_xml_parsing_pi_names(self):
         """Test parsing PI names from StudyDescription XML output."""
-        from unittest.mock import patch
         import xml.etree.ElementTree as ET
+        from unittest.mock import patch
 
         dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
             connect="TEST@localhost:11112",
@@ -223,8 +223,8 @@ class TestDcm4cheUtilsUnit:
 
     def test_xml_parsing_study_metadata(self):
         """Test parsing complete study metadata from XML output."""
-        from unittest.mock import patch
         import xml.etree.ElementTree as ET
+        from unittest.mock import patch
 
         dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
             connect="TEST@localhost:11112",
@@ -268,8 +268,8 @@ class TestDcm4cheUtilsUnit:
 
     def test_xml_parsing_number_of_instances(self):
         """Test parsing NumberOfStudyRelatedInstances from XML output."""
-        from unittest.mock import patch
         import xml.etree.ElementTree as ET
+        from unittest.mock import patch
 
         dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
             connect="TEST@localhost:11112",
@@ -295,8 +295,8 @@ class TestDcm4cheUtilsUnit:
 
     def test_xml_parsing_empty_response(self):
         """Test handling of empty XML response."""
-        from unittest.mock import patch
         import xml.etree.ElementTree as ET
+        from unittest.mock import patch
 
         dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
             connect="TEST@localhost:11112",

@@ -13,12 +13,12 @@ note:
 
 import logging
 import os
-import shutil
-import tempfile
 
 # for quote python strings for safe use in posix shells
 import shlex
+import shutil
 import subprocess
+import tempfile
 import time
 import xml.etree.ElementTree as ET
 
@@ -81,60 +81,60 @@ class Dcm4cheUtils:
         """
         # Create a temporary directory for XML output
         temp_dir = tempfile.mkdtemp(prefix="cfmm2tar_xml_")
-        
+
         try:
             # Build the findscu command with XML output to file
             cmd = self._findscu_str + f""" {matching_key}"""
-            
+
             # Add return tags
             for tag in return_tags:
                 cmd += f" -r {tag}"
-            
+
             # Add XML output options (without --out-cat so each study gets its own file)
             cmd += f" --xml --indent --out-dir {temp_dir}"
-            
+
             # Execute the command
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
             out, err = proc.communicate()
             return_code = proc.returncode
-            
+
             # Check for errors
             if err:
                 # Ignore the annoying Java info message
                 if err != b"Picked up _JAVA_OPTIONS: -Xmx2048m\n" and err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n":
                     self.logger.error(err)
-            
+
             # Find all XML files in the temporary directory (001.dcm, 002.dcm, etc.)
             xml_files = sorted([f for f in os.listdir(temp_dir) if f.endswith('.dcm')])
-            
+
             if not xml_files:
                 self.logger.warning(f"No XML output files found in: {temp_dir}")
                 return None
-            
+
             # Create a root element to combine all results
             combined_root = ET.Element("NativeDicomModel")
             combined_root.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
-            
+
             # Parse each XML file and combine the DicomAttribute elements
             for xml_file in xml_files:
                 xml_file_path = os.path.join(temp_dir, xml_file)
                 try:
                     tree = ET.parse(xml_file_path)
                     root = tree.getroot()
-                    
+
                     # Add all DicomAttribute elements from this file to the combined root
                     for attr in root.findall(".//DicomAttribute"):
                         combined_root.append(attr)
-                        
+
                 except ET.ParseError as e:
                     self.logger.error(f"Error parsing XML file {xml_file}: {e}")
                     continue
                 except Exception as e:
                     self.logger.error(f"Error reading XML file {xml_file}: {e}")
                     continue
-            
+
             return combined_root
-                
+
         finally:
             # Clean up the temporary directory
             if os.path.exists(temp_dir):
@@ -158,7 +158,7 @@ class Dcm4cheUtils:
 
         # Execute findscu with XML output to file
         root = self._execute_findscu_with_xml_output(matching_key, ["00201208"])
-        
+
         # Parse XML output
         instances = []
         if root is not None:
@@ -214,7 +214,7 @@ class Dcm4cheUtils:
 
         # Execute findscu with XML output to file
         root = self._execute_findscu_with_xml_output(matching_key, ["StudyInstanceUID"])
-        
+
         # Parse XML output
         StudyInstanceUID_list = []
         if root is not None:
