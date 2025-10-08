@@ -80,12 +80,7 @@ class Dcm4cheUtils:
         """
 
         # findscu with XML output
-        cmd = (
-            self._findscu_str
-            + f""" {matching_key}"""
-            + " -r 00201208"
-            + " -X"
-        )
+        cmd = self._findscu_str + f""" {matching_key}""" + " -r 00201208" + " -X"
 
         out, err, return_code = self._get_stdout_stderr_returncode(cmd)
 
@@ -101,7 +96,7 @@ class Dcm4cheUtils:
             decoded_out = out.decode("UTF-8")
             # findscu XML output wraps results in <NativeDicomModel>
             root = ET.fromstring(decoded_out)
-            
+
             # Find all DicomAttribute elements with tag="00201208" (NumberOfStudyRelatedInstances)
             for attr in root.findall(".//DicomAttribute[@tag='00201208']"):
                 value_elem = attr.find("Value")
@@ -154,12 +149,7 @@ class Dcm4cheUtils:
         """
 
         # findscu with XML output
-        cmd = (
-            self._findscu_str
-            + f""" {matching_key} """
-            + " -r StudyInstanceUID"
-            + " -X"
-        )
+        cmd = self._findscu_str + f""" {matching_key} """ + " -r StudyInstanceUID" + " -X"
         out, err, return_code = self._get_stdout_stderr_returncode(cmd)
 
         # local dcm4che
@@ -173,7 +163,7 @@ class Dcm4cheUtils:
         try:
             decoded_out = out.decode("UTF-8")
             root = ET.fromstring(decoded_out)
-            
+
             # Find all DicomAttribute elements with tag="0020000D" (StudyInstanceUID)
             for attr in root.findall(".//DicomAttribute[@tag='0020000D']"):
                 value_elem = attr.find("Value")
@@ -230,25 +220,25 @@ class Dcm4cheUtils:
         try:
             decoded_out = out.decode("UTF-8")
             root = ET.fromstring(decoded_out)
-            
+
             # Each NativeDicomModel represents one study result
             # The structure groups multiple DicomAttribute elements per study
             # We need to group them properly
-            
+
             # dcm4che XML output wraps each C-FIND response in a separate structure
             # For findscu, we look for groups of DicomAttribute elements
             # that together form a complete study
-            
+
             current_study = {}
-            
+
             # Iterate through all DicomAttribute elements
             for attr in root.findall(".//DicomAttribute"):
                 tag = attr.get("tag")
                 value_elem = attr.find("Value")
-                
+
                 if value_elem is not None and value_elem.text:
                     value = value_elem.text.strip()
-                    
+
                     # Map DICOM tags to field names
                     if tag == "0020000D":  # StudyInstanceUID
                         # If we already have a study in progress, save it
@@ -264,7 +254,7 @@ class Dcm4cheUtils:
                         current_study["StudyDate"] = value
                     elif tag == "00081030":  # StudyDescription
                         current_study["StudyDescription"] = value
-            
+
             # Don't forget the last study
             if current_study.get("StudyInstanceUID"):
                 studies.append(current_study)
@@ -287,13 +277,9 @@ class Dcm4cheUtils:
 
         Specifically, find all StudyDescriptions, take the portion before
         the caret, and return each unique value."""
-        
+
         # findscu with XML output
-        cmd = (
-            self._findscu_str
-            + " -r StudyDescription"
-            + " -X"
-        )
+        cmd = self._findscu_str + " -r StudyDescription" + " -X"
 
         out, err, _ = self._get_stdout_stderr_returncode(cmd)
 
@@ -305,7 +291,7 @@ class Dcm4cheUtils:
         try:
             decoded_out = out.decode("UTF-8")
             root = ET.fromstring(decoded_out)
-            
+
             # Find all DicomAttribute elements with tag="00081030" (StudyDescription)
             for attr in root.findall(".//DicomAttribute[@tag='00081030']"):
                 value_elem = attr.find("Value")
