@@ -4,7 +4,7 @@ Download a tarballed DICOM dataset from the CFMM DICOM server
 
 ## Overview
 
-`cfmm2tar` is a command-line tool for querying and downloading DICOM studies from the CFMM (Centre for Functional and Metabolic Mapping) DICOM server. It provides three flexible deployment options to suit different environments and use cases.
+`cfmm2tar` is a command-line tool for querying and downloading DICOM studies from the CFMM (Centre for Functional and Metabolic Mapping) DICOM server.
 
 ## Installation & Usage
 
