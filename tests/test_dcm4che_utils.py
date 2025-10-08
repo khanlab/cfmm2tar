@@ -22,7 +22,6 @@ class TestDcm4cheUtilsIntegration:
             connect=connect_string,
             username=dcm4che_server["username"],
             password=dcm4che_server["password"],
-            dcm4che_path="",  # Use local dcm4che tools
             other_options="",
         )
 
@@ -38,7 +37,6 @@ class TestDcm4cheUtilsIntegration:
             connect=connect_string,
             username=dcm4che_server["username"],
             password=dcm4che_server["password"],
-            dcm4che_path="",
             other_options="",
         )
 
@@ -54,7 +52,6 @@ class TestDcm4cheUtilsIntegration:
             connect=connect_string,
             username=dcm4che_server["username"],
             password=dcm4che_server["password"],
-            dcm4che_path="",
             other_options="",
         )
 
@@ -73,7 +70,6 @@ class TestDcm4cheUtilsIntegration:
             connect=connect_string,
             username=dcm4che_server["username"],
             password=dcm4che_server["password"],
-            dcm4che_path="",
             other_options="",
         )
 
@@ -112,7 +108,6 @@ class TestDcm4cheUtilsUnit:
             connect="TEST@localhost:11112",
             username="testuser",
             password="testpass",
-            dcm4che_path="",
             other_options="--tls-aes",
         )
 
@@ -121,21 +116,6 @@ class TestDcm4cheUtilsUnit:
         assert dcm4che_utils.password == "testpass"
         assert "--tls-aes" in dcm4che_utils._findscu_str
         assert "--trust-store" in dcm4che_utils._findscu_str
-
-    def test_init_with_docker_path(self):
-        """Test initialization with docker container path."""
-        dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
-            connect="TEST@localhost:11112",
-            username="testuser",
-            password="testpass",
-            dcm4che_path="docker run --rm dcm4che/dcm4che-tools:5.24.1",
-            other_options="",
-        )
-
-        assert "docker run --rm dcm4che/dcm4che-tools:5.24.1" in dcm4che_utils._findscu_str
-        assert "docker run --rm dcm4che/dcm4che-tools:5.24.1" in dcm4che_utils._getscu_str
-        assert "--trust-store" in dcm4che_utils._findscu_str
-        assert "--trust-store" in dcm4che_utils._getscu_str
 
     def test_xml_parsing_study_uids(self):
         """Test parsing StudyInstanceUIDs from XML output."""
