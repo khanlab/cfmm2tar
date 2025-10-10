@@ -38,12 +38,18 @@ Unit tests don't require a PACS server:
 
 ```bash
 pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
+
+# With coverage
+pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v --cov=cfmm2tar --cov-report=term-missing
 ```
 
 Or without activating the shell:
 
 ```bash
 pixi run pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
+
+# With coverage
+pixi run pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v --cov=cfmm2tar --cov-report=term-missing
 ```
 
 ### Run Integration Tests
@@ -78,7 +84,34 @@ pytest tests/ -v
 
 # Or using pixi run
 pixi run pytest tests/ -v
+
+# With coverage
+pytest tests/ -v --cov=cfmm2tar --cov-report=term-missing --cov-report=html
 ```
+
+### Generate Coverage Reports
+
+The project uses `pytest-cov` for code coverage analysis:
+
+```bash
+# Run tests with coverage (terminal report)
+pytest tests/ --cov=cfmm2tar --cov-report=term-missing
+
+# Generate HTML coverage report
+pytest tests/ --cov=cfmm2tar --cov-report=html
+# Open htmlcov/index.html in your browser
+
+# Generate XML coverage report (for CI/CD)
+pytest tests/ --cov=cfmm2tar --cov-report=xml
+
+# Run only unit tests with coverage
+pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit --cov=cfmm2tar --cov-report=term-missing
+```
+
+Coverage reports help identify:
+- Which code paths are tested
+- Which lines need additional test coverage
+- Overall project test coverage percentage
 
 ## Docker Compose Services
 
@@ -102,10 +135,14 @@ The `docker-compose.yml` file sets up:
 The GitHub Actions workflow (`.github/workflows/test.yml`) automatically:
 1. Sets up the pixi environment
 2. Installs dependencies using pixi
-3. Runs unit tests
+3. Runs unit tests with code coverage
 4. Starts the dcm4chee PACS server
-5. Runs integration tests
-6. Cleans up
+5. Runs integration tests with coverage
+6. Uploads coverage reports as artifacts
+7. Displays coverage summary in workflow output
+8. Cleans up
+
+Coverage reports are available as downloadable artifacts from the GitHub Actions workflow runs.
 
 ## Test Structure
 
