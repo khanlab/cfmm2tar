@@ -49,7 +49,17 @@ jobs:
 
       - name: Run unit tests
         run: |
-          pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
+          pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v --cov=cfmm2tar --cov-report=term-missing --cov-report=xml --cov-report=html
+
+      - name: Upload unit test coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-unit-tests
+          path: |
+            htmlcov/
+            coverage.xml
+            .coverage
 
       - name: Start dcm4chee PACS server
         run: |
@@ -66,8 +76,26 @@ jobs:
 
       - name: Run integration tests
         run: |
-          pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsIntegration -v
+          pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsIntegration -v --cov=cfmm2tar --cov-append --cov-report=term-missing --cov-report=xml --cov-report=html
         continue-on-error: true
+
+      - name: Upload combined coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-all-tests
+          path: |
+            htmlcov/
+            coverage.xml
+            .coverage
+
+      - name: Display coverage summary
+        if: always()
+        run: |
+          echo "### Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          coverage report >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Show logs on failure
         if: failure()
