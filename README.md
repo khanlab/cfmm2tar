@@ -105,22 +105,24 @@ cfmm2tar -u '1.2.840.113619.2.55.3.1234567890.123' output_dir
 
 ### Query Metadata Without Downloading
 
-You can query and export study metadata to a TSV file without downloading the actual DICOM files:
+You can query and export study metadata to a TSV file without downloading the actual DICOM files. Metadata is always saved to `study_metadata.tsv` in the output directory:
 
 ```bash
 # Export metadata for all studies on a specific date
-cfmm2tar -M study_metadata.tsv -d '20240101'
+cfmm2tar -m -d '20240101' output_dir
 
 # Export metadata for a specific Principal^Project
-cfmm2tar -M study_metadata.tsv -p 'Khan^NeuroAnalytics' -d '20240101-20240131'
+cfmm2tar -m -p 'Khan^NeuroAnalytics' -d '20240101-20240131' output_dir
 ```
 
-This creates a TSV file with columns:
+This creates a TSV file at `output_dir/study_metadata.tsv` with columns:
 - `StudyInstanceUID`: Unique identifier for the study
 - `PatientName`: Patient name
 - `PatientID`: Patient ID
 - `StudyDate`: Date of the study
 - `StudyDescription`: Study description (typically Principal^Project)
+
+Note: When downloading studies (without `-m`), metadata is automatically saved to `study_metadata.tsv` in the output directory.
 
 ### Download from UID List
 
@@ -128,37 +130,29 @@ After reviewing the metadata file, you can download specific studies:
 
 ```bash
 # Download all studies from the metadata file
-cfmm2tar --uid-from-file study_metadata.tsv output_dir
+cfmm2tar --from-metadata study_metadata.tsv output_dir
 
 # Or create a filtered version of the metadata file and download only those
 # (e.g., filter in Excel, grep, awk, or Python)
-cfmm2tar --uid-from-file study_metadata_filtered.tsv output_dir
+cfmm2tar --from-metadata study_metadata_filtered.tsv output_dir
 
 # You can also use a simple text file with one UID per line
-cfmm2tar --uid-from-file uid_list.txt output_dir
-```
-
-### Track Downloaded Studies
-
-Track which studies have already been downloaded:
-
-```bash
-# Use a tracking file to avoid re-downloading
-cfmm2tar -U ~/downloaded_uid_list.txt -p 'Khan^NeuroAnalytics' output_dir
+cfmm2tar --from-metadata uid_list.txt output_dir
 ```
 
 ### Workflow Example
 
 1. **Query and export metadata** for review:
    ```bash
-   cfmm2tar -M all_studies.tsv -p 'Khan^NeuroAnalytics' -d '20240101-20240131'
+   cfmm2tar -m -p 'Khan^NeuroAnalytics' -d '20240101-20240131' output_dir
    ```
+   This creates `output_dir/study_metadata.tsv`
 
-2. **Review and filter** the `all_studies.tsv` file (e.g., in Excel or with command-line tools)
+2. **Review and filter** the `study_metadata.tsv` file (e.g., in Excel or with command-line tools)
 
 3. **Download filtered studies**:
    ```bash
-   cfmm2tar --uid-from-file all_studies_filtered.tsv output_dir
+   cfmm2tar --from-metadata output_dir/study_metadata_filtered.tsv output_dir
    ```
 
 This workflow is especially useful when:
