@@ -6,10 +6,6 @@ Author: YingLi Lu
 Email:  yinglilu@gmail.com
 Date:   2018-05-22
 
-note:
-    Cross-platform compatible. Works on Linux/Mac/Windows.
-    Tested on Ubuntu 16.04+, Python 3.11+
-    findscu, and getscu are from dcm4che, not dcmtk!
 """
 
 import logging
