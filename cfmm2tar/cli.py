@@ -1,4 +1,4 @@
-#!/usr/bin/env ython3
+#!/usr/bin/env python3
 """
 CLI script for cfmm2tar - Download a tarballed DICOM dataset from the CFMM DICOM server
 
@@ -11,7 +11,7 @@ import argparse
 import getpass
 import os
 import sys
-from pathlib import Path
+import tempfile
 
 # Import the main function from retrieve_cfmm_tar module
 from cfmm2tar import retrieve_cfmm_tar
@@ -38,64 +38,48 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s -d '20170530' myfolder
+  %(prog)s -d '20170530' output_dir
       All scans on specific date
 
-  %(prog)s -d '20170530-' myfolder
+  %(prog)s -d '20170530-' output_dir
       All scans since date
 
-  %(prog)s -d '20170530-20170827' myfolder
+  %(prog)s -d '20170530-20170827' output_dir
       All scans in date range
 
-  %(prog)s -p 'Khan^NeuroAnalytics' myfolder
+  %(prog)s -p 'Khan^NeuroAnalytics' output_dir
       Specific Principal^Project on all dates
 
-  %(prog)s -n '*subj01*' myfolder
+  %(prog)s -n '*subj01*' output_dir
       Specific PatientName search
 
-  %(prog)s -u '12345.123456.123.1234567' myfolder
+  %(prog)s -u '12345.123456.123.1234567' output_dir
       Specific StudyInstanceUID
 
-  %(prog)s -U ~/downloaded_uid_list.txt -n '*subj01*' myfolder
-      Specify downloaded_uid_list file
-
-  %(prog)s -M study_metadata.tsv -p 'Khan^NeuroAnalytics' -d '20170530'
+  %(prog)s -m -p 'Khan^NeuroAnalytics' -d '20170530' output_dir
       Query and write study metadata to TSV file (no download)
 
-  %(prog)s --uid-from-file study_metadata.tsv myfolder
+  %(prog)s --from-metadata study_metadata.tsv output_dir
       Download studies using UIDs from metadata file
 
-  %(prog)s -t /scratch/$USER/cfmm2tar_intermediate_dicoms -n '*subj01*' myfolder
-      Specify intermediate dicoms dir
+  %(prog)s --temp-dir /scratch/$USER/cfmm2tar_temp -n '*subj01*' output_dir
+      Specify temporary directory for intermediate files
         """,
     )
 
     # Optional options
     parser.add_argument(
-        "-U",
-        "--downloaded-uid-list",
-        dest="downloaded_uid_list",
-        default="",
-        help="Path to downloaded_uid_list file (default: no tracking)",
+        "-m",
+        "--metadata-only",
+        dest="metadata_only",
+        action="store_true",
+        help="Only query and write metadata to study_metadata.tsv (no download). Can later use with --from-metadata to download.",
     )
     parser.add_argument(
-        "-M",
-        "--metadata-file",
-        dest="metadata_file",
+        "--from-metadata",
+        dest="from_metadata",
         default="",
-        help="Path to metadata TSV file. If specified, only query and write metadata (no download). Can later use with --uid-from-file to download.",
-    )
-    parser.add_argument(
-        "--save-metadata",
-        dest="save_metadata",
-        default="",
-        help="Path to save metadata TSV during download (includes tar file paths)",
-    )
-    parser.add_argument(
-        "--uid-from-file",
-        dest="uid_from_file",
-        default="",
-        help="Path to file containing StudyInstanceUIDs to download (one per line or TSV with StudyInstanceUID column)",
+        help="Path to metadata TSV file containing StudyInstanceUIDs to download (one per line or TSV with StudyInstanceUID column)",
     )
     parser.add_argument(
         "-c",
@@ -105,23 +89,20 @@ Examples:
         help="Path to uwo_credentials file (default: ~/.uwo_credentials)",
     )
     parser.add_argument(
-        "-t",
-        "--intermediate-dir",
-        dest="intermediate_dir",
+        "--temp-dir",
+        dest="temp_dir",
         default="",
-        help="Path to intermediate_dicoms_dir (default: <output folder>/cfmm2tar_intermediate_dicoms)",
+        help="Path to temporary directory for intermediate DICOM files (default: system temp directory)",
     )
     parser.add_argument(
-        "-s",
-        "--server",
+        "--dcm4che-server",
         dest="dicom_connection",
         default=os.environ.get("DICOM_CONNECTION", "CFMM@dicom.cfmm.uwo.ca:11112"),
         help="DICOM server connection string (default: from DICOM_CONNECTION env var or CFMM@dicom.cfmm.uwo.ca:11112)",
     )
     parser.add_argument(
-        "-x",
-        "--other-options",
-        dest="other_options",
+        "--dcm4che-options",
+        dest="dcm4che_options",
         default=os.environ.get("OTHER_OPTIONS", ""),
         help="Other options to pass to dcm4che tools (default: from OTHER_OPTIONS env var)",
     )
@@ -149,10 +130,10 @@ Examples:
     )
     parser.add_argument(
         "-p",
-        "--principal",
+        "--description",
         dest="study_search",
         default="*",
-        help='Principal^Project search string (default: "*" for all)',
+        help='Study description / Principal^Project search string (default: "*" for all)',
     )
     parser.add_argument(
         "-u",
@@ -162,19 +143,20 @@ Examples:
         help="StudyInstanceUID (Note: this will override other search options)",
     )
 
-    # Positional argument
+    # Required positional argument
     parser.add_argument(
-        "-o",
-        "--output_dir",
-        dest="output_dir",
-        default="cfmm2tar",
-        help="Output folder for retrieved DICOM data",
+        "output_dir",
+        help="Output directory for retrieved DICOM data (required)",
     )
 
     args = parser.parse_args()
 
+    # Setup output directory
+    output_dir = args.output_dir
+    os.makedirs(output_dir, exist_ok=True)
+
     # Handle metadata-only mode (query and write to TSV, no download)
-    if args.metadata_file:
+    if args.metadata_only:
         # We'll need credentials for query even in metadata mode
         username, password = read_credentials(args.credentials_file)
 
@@ -183,14 +165,14 @@ Examples:
             password = getpass.getpass("UWO Password: ")
 
         # Import here to access Dcm4cheUtils
-        from cfmm2tar import Dcm4cheUtils
+        from cfmm2tar import dcm4che_utils
 
         # Create dcm4che utils instance
-        cfmm_dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
+        cfmm_dcm4che_utils = dcm4che_utils.Dcm4cheUtils(
             args.dicom_connection,
             username,
             password,
-            args.other_options,
+            args.dcm4che_options,
             force_refresh_trust_store=args.refresh_trust_store,
         )
 
@@ -211,10 +193,11 @@ Examples:
 
         print(f"Found {len(studies)} studies")
 
-        # Write to TSV file
+        # Write to TSV file in output_dir
+        metadata_file = os.path.join(output_dir, "study_metadata.tsv")
         import csv
 
-        with open(args.metadata_file, "w", newline="") as f:
+        with open(metadata_file, "w", newline="") as f:
             fieldnames = [
                 "StudyInstanceUID",
                 "PatientName",
@@ -227,17 +210,17 @@ Examples:
             for study in studies:
                 writer.writerow(study)
 
-        print(f"Study metadata written to: {args.metadata_file}")
+        print(f"Study metadata written to: {metadata_file}")
         print("\nTo download these studies later, use:")
-        print(f"  cfmm2tar --uid-from-file {args.metadata_file} <output_dir>")
+        print(f"  cfmm2tar --from-metadata {metadata_file} {output_dir}")
         sys.exit(0)
 
-    # Handle uid-from-file mode (download specific UIDs from file)
+    # Handle from-metadata mode (download specific UIDs from file)
     study_instance_uid = args.study_instance_uid
-    if args.uid_from_file:
+    if args.from_metadata:
         # Read UIDs from file
         uids = []
-        with open(args.uid_from_file) as f:
+        with open(args.from_metadata) as f:
             lines = f.readlines()
 
         # Check if it's a TSV with header
@@ -259,10 +242,10 @@ Examples:
                     uids.append(uid)
 
         if not uids:
-            print(f"No StudyInstanceUIDs found in {args.uid_from_file}")
+            print(f"No StudyInstanceUIDs found in {args.from_metadata}")
             sys.exit(1)
 
-        print(f"Will download {len(uids)} studies from {args.uid_from_file}")
+        print(f"Will download {len(uids)} studies from {args.from_metadata}")
 
     # Read or prompt for credentials
     username, password = read_credentials(args.credentials_file)
@@ -273,29 +256,24 @@ Examples:
 
     # Setup directories
     output_dir = args.output_dir
-    intermediate_dir = args.intermediate_dir
+    temp_dir = args.temp_dir
 
-    if not intermediate_dir:
-        intermediate_dir = os.path.join(output_dir, "cfmm2tar_intermediate_dicoms")
+    # Use system temp directory if not specified
+    if not temp_dir:
+        temp_dir = os.path.join(tempfile.gettempdir(), "cfmm2tar_temp")
 
-    # Create output directories
+    # Create directories
     os.makedirs(output_dir, exist_ok=True)
-    os.makedirs(intermediate_dir, exist_ok=True)
+    os.makedirs(temp_dir, exist_ok=True)
 
-    # Setup downloaded UID list file if specified
-    downloaded_uid_list = args.downloaded_uid_list
-    if downloaded_uid_list:
-        downloaded_uid_dir = os.path.dirname(downloaded_uid_list)
-        if downloaded_uid_dir and not os.path.exists(downloaded_uid_dir):
-            os.makedirs(downloaded_uid_dir, exist_ok=True)
-        if not os.path.exists(downloaded_uid_list):
-            Path(downloaded_uid_list).touch()
+    # Always save metadata to output_dir/study_metadata.tsv during download
+    metadata_tsv_filename = os.path.join(output_dir, "study_metadata.tsv")
 
     # Call the main retrieve function
     keep_sorted_dicom = False
 
     try:
-        if args.uid_from_file:
+        if args.from_metadata:
             # Download each UID from the file
             for i, uid in enumerate(uids):
                 print(f"\nDownloading study {i + 1}/{len(uids)}: {uid}")
@@ -304,15 +282,15 @@ Examples:
                     uwo_password=password,
                     connect=args.dicom_connection,
                     PI_matching_key=args.study_search,
-                    retrieve_dest_dir=intermediate_dir,
+                    retrieve_dest_dir=temp_dir,
                     keep_sorted_dest_dir_flag=keep_sorted_dicom,
                     tar_dest_dir=output_dir,
                     study_date=args.date_search,
                     patient_name=args.name_search,
                     study_instance_uid=uid,
-                    other_options=args.other_options,
-                    downloaded_uids_filename=downloaded_uid_list,
-                    metadata_tsv_filename=args.save_metadata,
+                    other_options=args.dcm4che_options,
+                    downloaded_uids_filename="",
+                    metadata_tsv_filename=metadata_tsv_filename,
                     force_refresh_trust_store=args.refresh_trust_store,
                 )
         else:
@@ -322,21 +300,21 @@ Examples:
                 uwo_password=password,
                 connect=args.dicom_connection,
                 PI_matching_key=args.study_search,
-                retrieve_dest_dir=intermediate_dir,
+                retrieve_dest_dir=temp_dir,
                 keep_sorted_dest_dir_flag=keep_sorted_dicom,
                 tar_dest_dir=output_dir,
                 study_date=args.date_search,
                 patient_name=args.name_search,
                 study_instance_uid=study_instance_uid,
-                other_options=args.other_options,
-                downloaded_uids_filename=downloaded_uid_list,
-                metadata_tsv_filename=args.save_metadata,
+                other_options=args.dcm4che_options,
+                downloaded_uids_filename="",
+                metadata_tsv_filename=metadata_tsv_filename,
                 force_refresh_trust_store=args.refresh_trust_store,
             )
 
-        # Clean up intermediate directory if empty
+        # Clean up temp directory if empty
         try:
-            os.rmdir(intermediate_dir)
+            os.rmdir(temp_dir)
         except OSError:
             # Directory not empty, that's fine
             pass

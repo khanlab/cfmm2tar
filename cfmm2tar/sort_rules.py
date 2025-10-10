@@ -9,8 +9,6 @@ Author: YingLi Lu
 Email:  yinglilu@gmail.com
 Date:   2018-05-22
 
-note:
-    Tested on windows 10/ubuntu 16.04, python 2.7.14
 """
 
 import logging
@@ -27,17 +25,17 @@ def sort_rule_demo(filename):
     patient_name
       |-study_date
         |-series_number
-          |-{patient_name}.{study_data}.{series_number}.{image_instance_number:04d}.dcm
+          |-{patient_name}.{study_date}.{series_number}.{image_instance_number:04d}.dcm
           ...
         |-series_number
         ...
 
-    intput:
+    input:
         filename: dicom filename
     output:
         a dictionary:
             key: filename
-            value: patient_name/study_date/sereis_number/{patient_name}.{study_data}.{series_number}.{image:04d}.dcm
+            value: patient_name/study_date/series_number/{patient_name}.{study_date}.{series_number}.{image:04d}.dcm
 
     """
     logger = logging.getLogger(__name__)
@@ -72,7 +70,7 @@ def sort_rule_CFMM(filename):
     """
     CFMM's Dicom sort rule
 
-    intput:
+    input:
         filename: dicom filename
     output:
         a dictionary:

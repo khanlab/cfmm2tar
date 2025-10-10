@@ -105,22 +105,24 @@ cfmm2tar -u '1.2.840.113619.2.55.3.1234567890.123' output_dir
 
 ### Query Metadata Without Downloading
 
-You can query and export study metadata to a TSV file without downloading the actual DICOM files:
+You can query and export study metadata to a TSV file without downloading the actual DICOM files. Metadata is always saved to `study_metadata.tsv` in the output directory:
 
 ```bash
 # Export metadata for all studies on a specific date
-cfmm2tar -M study_metadata.tsv -d '20240101'
+cfmm2tar -m -d '20240101' output_dir
 
 # Export metadata for a specific Principal^Project
-cfmm2tar -M study_metadata.tsv -p 'Khan^NeuroAnalytics' -d '20240101-20240131'
+cfmm2tar -m -p 'Khan^NeuroAnalytics' -d '20240101-20240131' output_dir
 ```
 
-This creates a TSV file with columns:
+This creates a TSV file at `output_dir/study_metadata.tsv` with columns:
 - `StudyInstanceUID`: Unique identifier for the study
 - `PatientName`: Patient name
 - `PatientID`: Patient ID
 - `StudyDate`: Date of the study
 - `StudyDescription`: Study description (typically Principal^Project)
+
+Note: When downloading studies (without `-m`), metadata is automatically saved to `study_metadata.tsv` in the output directory.
 
 ### Download from UID List
 
@@ -128,37 +130,29 @@ After reviewing the metadata file, you can download specific studies:
 
 ```bash
 # Download all studies from the metadata file
-cfmm2tar --uid-from-file study_metadata.tsv output_dir
+cfmm2tar --from-metadata study_metadata.tsv output_dir
 
 # Or create a filtered version of the metadata file and download only those
 # (e.g., filter in Excel, grep, awk, or Python)
-cfmm2tar --uid-from-file study_metadata_filtered.tsv output_dir
+cfmm2tar --from-metadata study_metadata_filtered.tsv output_dir
 
 # You can also use a simple text file with one UID per line
-cfmm2tar --uid-from-file uid_list.txt output_dir
-```
-
-### Track Downloaded Studies
-
-Track which studies have already been downloaded:
-
-```bash
-# Use a tracking file to avoid re-downloading
-cfmm2tar -U ~/downloaded_uid_list.txt -p 'Khan^NeuroAnalytics' output_dir
+cfmm2tar --from-metadata uid_list.txt output_dir
 ```
 
 ### Workflow Example
 
 1. **Query and export metadata** for review:
    ```bash
-   cfmm2tar -M all_studies.tsv -p 'Khan^NeuroAnalytics' -d '20240101-20240131'
+   cfmm2tar -m -p 'Khan^NeuroAnalytics' -d '20240101-20240131' output_dir
    ```
+   This creates `output_dir/study_metadata.tsv`
 
-2. **Review and filter** the `all_studies.tsv` file (e.g., in Excel or with command-line tools)
+2. **Review and filter** the `study_metadata.tsv` file (e.g., in Excel or with command-line tools)
 
 3. **Download filtered studies**:
    ```bash
-   cfmm2tar --uid-from-file all_studies_filtered.tsv output_dir
+   cfmm2tar --from-metadata output_dir/study_metadata_filtered.tsv output_dir
    ```
 
 This workflow is especially useful when:
@@ -270,6 +264,9 @@ pixi shell
 # Run unit tests (no PACS server required)
 pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
 
+# Run unit tests with coverage
+pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v --cov=cfmm2tar --cov-report=term-missing
+
 # Run integration tests (requires Docker)
 cd tests
 docker compose up -d
@@ -288,19 +285,37 @@ Alternatively, you can run tests using pixi directly without activating the shel
 # Run unit tests
 pixi run pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
 
-# Run all tests
-pixi run pytest tests/ -v
+# Run all tests with coverage
+pixi run pytest tests/ -v --cov=cfmm2tar --cov-report=term-missing --cov-report=html
 ```
 
 See [tests/README.md](tests/README.md) for detailed testing documentation.
+
+### Test Coverage
+
+The project uses `pytest-cov` for code coverage analysis:
+
+```bash
+# Run tests with coverage report
+pytest tests/ --cov=cfmm2tar --cov-report=term-missing --cov-report=html
+
+# View coverage report in browser
+# Open htmlcov/index.html in your browser
+
+# Generate XML coverage report (for CI/CD integration)
+pytest tests/ --cov=cfmm2tar --cov-report=xml
+```
+
+Coverage reports are automatically generated in CI/CD and uploaded as artifacts.
 
 ### Continuous Integration
 
 The project uses GitHub Actions for automated testing. The workflow:
 1. Sets up the pixi environment
-2. Runs unit tests on every push and pull request
+2. Runs unit tests with code coverage on every push and pull request
 3. Starts a containerized dcm4chee PACS server
-4. Runs integration tests against the PACS server
-5. Reports results
+4. Runs integration tests against the PACS server with coverage
+5. Uploads coverage reports as artifacts
+6. Displays coverage summary in the workflow
 
 See [.github/workflows/test.yml](.github/workflows/test.yml) for the complete workflow.

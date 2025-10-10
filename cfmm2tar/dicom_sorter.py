@@ -6,8 +6,6 @@ Author: YingLi Lu
 Email:  yinglilu@gmail.com
 Date:   2018-05-22
 
-Note:
-    Tested on windows 10/ubuntu 16.04, python 2.7.14
 """
 
 import logging

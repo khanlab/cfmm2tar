@@ -6,10 +6,6 @@ Author: YingLi Lu
 Email:  yinglilu@gmail.com
 Date:   2018-05-22
 
-note:
-    Works on Linux/Mac only.
-    Tested on Ubuntu 16.04, python 2.7.13
-    findscu, and getscu are from dcm4che, not dcmtk!
 """
 
 import logging
@@ -19,7 +15,7 @@ import sys
 
 import pydicom
 
-from . import Dcm4cheUtils, DicomSorter, sort_rules
+from . import dcm4che_utils, dicom_sorter, sort_rules
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s-%(levelname)s-%(message)s", datefmt="%Y/%m/%d %I:%M:%S"
@@ -90,7 +86,7 @@ def main(
     logger = logging.getLogger(__name__)
 
     # Dcm4cheUtils
-    cfmm_dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
+    cfmm_dcm4che_utils = dcm4che_utils.Dcm4cheUtils(
         connect,
         uwo_username,
         uwo_password,
@@ -178,7 +174,7 @@ def main(
         if not os.path.exists(tar_dest_dir):
             os.makedirs(tar_dest_dir)
 
-        with DicomSorter.DicomSorter(
+        with dicom_sorter.DicomSorter(
             retrieved_dicom_dir, sort_rules.sort_rule_CFMM, tar_dest_dir
         ) as d:
             # according to CFMM's rule, folder depth is 5:
