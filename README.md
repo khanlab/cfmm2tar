@@ -161,6 +161,270 @@ This workflow is especially useful when:
 - You're sharing the metadata with collaborators to decide what to download
 - You need to filter studies based on multiple criteria
 
+## Python API
+
+In addition to the command-line interface, `cfmm2tar` provides a Python API for programmatic access. This is useful for integration into Python scripts, Jupyter notebooks, or workflow management tools like Snakemake.
+
+### Installation for API Use
+
+```bash
+# Basic installation
+pip install cfmm2tar
+
+# With pandas support for DataFrame operations
+pip install cfmm2tar[dataframe]
+```
+
+**Note:** The Python API requires dcm4che tools to be installed separately, or you can use the `--dcm4che-container` option (future feature) to point to a container with dcm4che.
+
+### Query Metadata
+
+Query study metadata and get results as a list of dictionaries or pandas DataFrame:
+
+```python
+from cfmm2tar import query_metadata
+
+# Query metadata and get as list of dicts
+studies = query_metadata(
+    username="your_username",
+    password="your_password",
+    study_description="Khan^NeuroAnalytics",
+    study_date="20240101-20240131",
+    patient_name="*",
+    return_type="list"  # or "dataframe" for pandas DataFrame
+)
+
+print(f"Found {len(studies)} studies")
+for study in studies:
+    print(f"  {study['StudyDate']}: {study['StudyDescription']}")
+```
+
+With pandas DataFrame:
+
+```python
+import pandas as pd
+from cfmm2tar import query_metadata
+
+# Query metadata and get as DataFrame
+df = query_metadata(
+    username="your_username",
+    password="your_password",
+    study_description="Khan^*",
+    study_date="20240101-",
+    return_type="dataframe"
+)
+
+# Filter and analyze
+recent_studies = df[df['StudyDate'] > '20240601']
+print(recent_studies[['StudyDate', 'PatientName', 'StudyDescription']])
+```
+
+### Download Studies
+
+Download studies programmatically:
+
+```python
+from cfmm2tar import download_studies
+
+# Download studies matching criteria
+output_dir = download_studies(
+    username="your_username",
+    password="your_password",
+    output_dir="/path/to/output",
+    study_description="Khan^NeuroAnalytics",
+    study_date="20240101",
+    patient_name="*subj01*"
+)
+
+print(f"Studies downloaded to: {output_dir}")
+```
+
+Download a specific study by UID:
+
+```python
+from cfmm2tar import download_studies
+
+download_studies(
+    username="your_username",
+    password="your_password",
+    output_dir="/path/to/output",
+    study_instance_uid="1.2.840.113619.2.55.3.1234567890.123"
+)
+```
+
+### Download from Metadata
+
+Download studies using metadata from various sources:
+
+```python
+from cfmm2tar import download_studies_from_metadata
+
+# From a list of study metadata dicts
+studies = [
+    {'StudyInstanceUID': '1.2.3.4', 'PatientName': 'Patient1'},
+    {'StudyInstanceUID': '5.6.7.8', 'PatientName': 'Patient2'}
+]
+download_studies_from_metadata(
+    username="your_username",
+    password="your_password",
+    output_dir="/path/to/output",
+    metadata=studies
+)
+
+# From a TSV file
+download_studies_from_metadata(
+    username="your_username",
+    password="your_password",
+    output_dir="/path/to/output",
+    metadata="study_metadata.tsv"
+)
+
+# From a pandas DataFrame
+import pandas as pd
+df = pd.read_csv("study_metadata.tsv", sep="\t")
+filtered_df = df[df['StudyDate'] > '20240101']
+download_studies_from_metadata(
+    username="your_username",
+    password="your_password",
+    output_dir="/path/to/output",
+    metadata=filtered_df
+)
+```
+
+### Complete Workflow Example
+
+Here's a complete workflow that queries metadata, filters studies, and downloads selected ones:
+
+```python
+from cfmm2tar import query_metadata, download_studies_from_metadata
+import pandas as pd
+
+# Step 1: Query all available studies
+studies_df = query_metadata(
+    username="your_username",
+    password="your_password",
+    study_description="Khan^*",
+    study_date="20240101-20240131",
+    return_type="dataframe"
+)
+
+print(f"Found {len(studies_df)} total studies")
+
+# Step 2: Filter studies based on criteria
+# For example, only studies with specific patient names
+filtered_df = studies_df[
+    studies_df['PatientName'].str.contains('subj0[1-3]', regex=True)
+]
+
+print(f"Filtered to {len(filtered_df)} studies")
+
+# Step 3: Download the filtered studies
+download_studies_from_metadata(
+    username="your_username",
+    password="your_password",
+    output_dir="/path/to/output",
+    metadata=filtered_df
+)
+
+print("Download complete!")
+```
+
+### Use in Snakemake
+
+The Python API works seamlessly with Snakemake workflows:
+
+```python
+# Snakefile
+from cfmm2tar import query_metadata, download_studies_from_metadata
+
+# Query metadata in a rule
+rule query_studies:
+    output:
+        "metadata/study_list.tsv"
+    run:
+        studies = query_metadata(
+            username=config["username"],
+            password=config["password"],
+            study_description=config["project"],
+            study_date=config["date_range"],
+            return_type="dataframe"
+        )
+        studies.to_csv(output[0], sep="\t", index=False)
+
+# Download studies in another rule
+rule download_studies:
+    input:
+        "metadata/study_list.tsv"
+    output:
+        directory("data/dicoms")
+    run:
+        download_studies_from_metadata(
+            username=config["username"],
+            password=config["password"],
+            output_dir=output[0],
+            metadata=input[0]
+        )
+```
+
+### API Reference
+
+#### `query_metadata()`
+
+Query study metadata from the DICOM server.
+
+**Parameters:**
+- `username` (str): UWO username for authentication
+- `password` (str): UWO password for authentication
+- `study_description` (str): Study description search string (default: "*")
+- `study_date` (str): Date search string (default: "-")
+- `patient_name` (str): PatientName search string (default: "*")
+- `dicom_server` (str): DICOM server connection string (default: "CFMM@dicom.cfmm.uwo.ca:11112")
+- `dcm4che_options` (str): Additional dcm4che options (default: "")
+- `force_refresh_trust_store` (bool): Force refresh trust store (default: False)
+- `return_type` (str): "list" or "dataframe" (default: "list")
+
+**Returns:**
+- List of dicts or pandas DataFrame with study metadata
+
+#### `download_studies()`
+
+Download DICOM studies and create tar archives.
+
+**Parameters:**
+- `username` (str): UWO username for authentication
+- `password` (str): UWO password for authentication
+- `output_dir` (str): Output directory for tar archives
+- `study_description` (str): Study description search string (default: "*")
+- `study_date` (str): Date search string (default: "-")
+- `patient_name` (str): PatientName search string (default: "*")
+- `study_instance_uid` (str): Specific StudyInstanceUID (default: "*")
+- `temp_dir` (str, optional): Temporary directory for intermediate files
+- `dicom_server` (str): DICOM server connection string (default: "CFMM@dicom.cfmm.uwo.ca:11112")
+- `dcm4che_options` (str): Additional dcm4che options (default: "")
+- `force_refresh_trust_store` (bool): Force refresh trust store (default: False)
+- `keep_sorted_dicom` (bool): Keep sorted DICOM files (default: False)
+
+**Returns:**
+- Path to output directory
+
+#### `download_studies_from_metadata()`
+
+Download studies using UIDs from metadata source.
+
+**Parameters:**
+- `username` (str): UWO username for authentication
+- `password` (str): UWO password for authentication
+- `output_dir` (str): Output directory for tar archives
+- `metadata` (str, list, or DataFrame): Metadata source (file path, list of dicts, or DataFrame)
+- `temp_dir` (str, optional): Temporary directory for intermediate files
+- `dicom_server` (str): DICOM server connection string (default: "CFMM@dicom.cfmm.uwo.ca:11112")
+- `dcm4che_options` (str): Additional dcm4che options (default: "")
+- `force_refresh_trust_store` (bool): Force refresh trust store (default: False)
+- `keep_sorted_dicom` (bool): Keep sorted DICOM files (default: False)
+
+**Returns:**
+- Path to output directory
+
 ## TLS Certificate Management
 
 When connecting to the CFMM DICOM server, `cfmm2tar` requires a valid TLS certificate trust store for secure communication. The tool automatically handles certificate management for you.
