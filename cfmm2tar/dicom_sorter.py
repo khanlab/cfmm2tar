@@ -7,7 +7,7 @@ Email:  yinglilu@gmail.com
 Date:   2018-05-22
 
 Note:
-    Tested on windows 10/ubuntu 16.04, python 2.7.14
+    Cross-platform compatible. Tested on Windows 10+, Ubuntu 16.04+, Python 3.11+
 """
 
 import logging
