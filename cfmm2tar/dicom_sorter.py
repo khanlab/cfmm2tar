@@ -6,8 +6,6 @@ Author: YingLi Lu
 Email:  yinglilu@gmail.com
 Date:   2018-05-22
 
-Note:
-    Cross-platform compatible. Tested on Windows 10+, Ubuntu 16.04+, Python 3.11+
 """
 
 import logging
