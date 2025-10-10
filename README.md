@@ -425,6 +425,19 @@ Download studies using UIDs from metadata source.
 **Returns:**
 - Path to output directory
 
+### Examples
+
+For complete working examples, see the `examples/` directory:
+
+- **`examples/api_usage.py`**: Interactive examples demonstrating various API usage patterns
+- **`examples/Snakefile_example`**: Example Snakemake workflow integrating cfmm2tar
+- **`examples/README.md`**: Detailed documentation for the examples
+
+Run the interactive examples:
+```bash
+python examples/api_usage.py
+```
+
 ## TLS Certificate Management
 
 When connecting to the CFMM DICOM server, `cfmm2tar` requires a valid TLS certificate trust store for secure communication. The tool automatically handles certificate management for you.
