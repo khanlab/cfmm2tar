@@ -6,9 +6,6 @@ Author: YingLi Lu
 Email:  yinglilu@gmail.com
 Date:   2018-05-22
 
-note:
-    Cross-platform compatible (uses XML parsing instead of shell commands).
-    Tested on Ubuntu 16.04+, Python 3.11+
 """
 
 import logging
