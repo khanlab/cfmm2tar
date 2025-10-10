@@ -19,7 +19,7 @@ import sys
 
 import pydicom
 
-from . import Dcm4cheUtils, DicomSorter, sort_rules
+from . import dcm4che_utils, dicom_sorter, sort_rules
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s-%(levelname)s-%(message)s", datefmt="%Y/%m/%d %I:%M:%S"
@@ -90,7 +90,7 @@ def main(
     logger = logging.getLogger(__name__)
 
     # Dcm4cheUtils
-    cfmm_dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
+    cfmm_dcm4che_utils = dcm4che_utils.Dcm4cheUtils(
         connect,
         uwo_username,
         uwo_password,
@@ -178,7 +178,7 @@ def main(
         if not os.path.exists(tar_dest_dir):
             os.makedirs(tar_dest_dir)
 
-        with DicomSorter.DicomSorter(
+        with dicom_sorter.DicomSorter(
             retrieved_dicom_dir, sort_rules.sort_rule_CFMM, tar_dest_dir
         ) as d:
             # according to CFMM's rule, folder depth is 5:

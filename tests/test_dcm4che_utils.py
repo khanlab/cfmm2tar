@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from cfmm2tar import Dcm4cheUtils
+from cfmm2tar import dcm4che_utils as dcm4che_utils_module
 
 
 @pytest.mark.integration
@@ -18,7 +18,7 @@ class TestDcm4cheUtilsIntegration:
         connect_string = f"DCM4CHEE@{dcm4che_server['host']}:{dcm4che_server['port']}"
 
         # Create Dcm4cheUtils instance
-        dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
             connect=connect_string,
             username=dcm4che_server["username"],
             password=dcm4che_server["password"],
@@ -33,7 +33,7 @@ class TestDcm4cheUtilsIntegration:
         """Test getting all PI names (StudyDescriptions) from PACS."""
         connect_string = f"DCM4CHEE@{dcm4che_server['host']}:{dcm4che_server['port']}"
 
-        dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
             connect=connect_string,
             username=dcm4che_server["username"],
             password=dcm4che_server["password"],
@@ -48,7 +48,7 @@ class TestDcm4cheUtilsIntegration:
         """Test querying studies with matching key."""
         connect_string = f"DCM4CHEE@{dcm4che_server['host']}:{dcm4che_server['port']}"
 
-        dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
             connect=connect_string,
             username=dcm4che_server["username"],
             password=dcm4che_server["password"],
@@ -66,7 +66,7 @@ class TestDcm4cheUtilsIntegration:
         """Test getting study metadata."""
         connect_string = f"DCM4CHEE@{dcm4che_server['host']}:{dcm4che_server['port']}"
 
-        dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
             connect=connect_string,
             username=dcm4che_server["username"],
             password=dcm4che_server["password"],
@@ -98,13 +98,13 @@ class TestDcm4cheUtilsUnit:
     @pytest.fixture(autouse=True)
     def mock_truststore(self):
         """Automatically mock truststore for all unit tests."""
-        with patch("cfmm2tar.Dcm4cheUtils.truststore.get_truststore_option") as mock:
+        with patch("cfmm2tar.dcm4che_utils.truststore.get_truststore_option") as mock:
             mock.return_value = "--trust-store /path/to/truststore.jks"
             yield mock
 
     def test_init_with_credentials(self):
         """Test initialization with credentials."""
-        dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
             connect="TEST@localhost:11112",
             username="testuser",
             password="testpass",
@@ -122,7 +122,7 @@ class TestDcm4cheUtilsUnit:
         import xml.etree.ElementTree as ET
         from unittest.mock import patch
 
-        dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
             connect="TEST@localhost:11112",
             username="testuser",
             password="testpass",
@@ -150,7 +150,7 @@ class TestDcm4cheUtilsUnit:
         import xml.etree.ElementTree as ET
         from unittest.mock import patch
 
-        dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
             connect="TEST@localhost:11112",
             username="testuser",
             password="testpass",
@@ -182,7 +182,7 @@ class TestDcm4cheUtilsUnit:
         import xml.etree.ElementTree as ET
         from unittest.mock import patch
 
-        dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
             connect="TEST@localhost:11112",
             username="testuser",
             password="testpass",
@@ -218,7 +218,7 @@ class TestDcm4cheUtilsUnit:
         import xml.etree.ElementTree as ET
         from unittest.mock import patch
 
-        dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
             connect="TEST@localhost:11112",
             username="testuser",
             password="testpass",
@@ -263,7 +263,7 @@ class TestDcm4cheUtilsUnit:
         import xml.etree.ElementTree as ET
         from unittest.mock import patch
 
-        dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
             connect="TEST@localhost:11112",
             username="testuser",
             password="testpass",
@@ -290,7 +290,7 @@ class TestDcm4cheUtilsUnit:
         import xml.etree.ElementTree as ET
         from unittest.mock import patch
 
-        dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
             connect="TEST@localhost:11112",
             username="testuser",
             password="testpass",

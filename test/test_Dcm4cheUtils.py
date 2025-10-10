@@ -1,6 +1,6 @@
 import logging
 
-from cfmm2tar import Dcm4cheUtils
+from cfmm2tar import dcm4che_utils
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -26,7 +26,7 @@ with open(UWO_CREDENTIALS_FILES) as f:
 USERNAME = contents[0]
 PASSWORD = contents[1]
 
-cfmm_dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(CONNECT, USERNAME, PASSWORD, DCM4CHE_PATH)
+cfmm_dcm4che_utils = dcm4che_utils.Dcm4cheUtils(CONNECT, USERNAME, PASSWORD, DCM4CHE_PATH)
 
 logging.info("------testing------ _get_NumberOfStudyRelatedInstances")
 r = cfmm_dcm4che_utils._get_NumberOfStudyRelatedInstances(MATCHING_KEY)

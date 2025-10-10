@@ -183,10 +183,10 @@ Examples:
             password = getpass.getpass("UWO Password: ")
 
         # Import here to access Dcm4cheUtils
-        from cfmm2tar import Dcm4cheUtils
+        from cfmm2tar import dcm4che_utils
 
         # Create dcm4che utils instance
-        cfmm_dcm4che_utils = Dcm4cheUtils.Dcm4cheUtils(
+        cfmm_dcm4che_utils = dcm4che_utils.Dcm4cheUtils(
             args.dicom_connection,
             username,
             password,
