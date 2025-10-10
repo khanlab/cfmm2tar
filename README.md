@@ -264,6 +264,9 @@ pixi shell
 # Run unit tests (no PACS server required)
 pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
 
+# Run unit tests with coverage
+pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v --cov=cfmm2tar --cov-report=term-missing
+
 # Run integration tests (requires Docker)
 cd tests
 docker compose up -d
@@ -282,19 +285,37 @@ Alternatively, you can run tests using pixi directly without activating the shel
 # Run unit tests
 pixi run pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
 
-# Run all tests
-pixi run pytest tests/ -v
+# Run all tests with coverage
+pixi run pytest tests/ -v --cov=cfmm2tar --cov-report=term-missing --cov-report=html
 ```
 
 See [tests/README.md](tests/README.md) for detailed testing documentation.
+
+### Test Coverage
+
+The project uses `pytest-cov` for code coverage analysis:
+
+```bash
+# Run tests with coverage report
+pytest tests/ --cov=cfmm2tar --cov-report=term-missing --cov-report=html
+
+# View coverage report in browser
+# Open htmlcov/index.html in your browser
+
+# Generate XML coverage report (for CI/CD integration)
+pytest tests/ --cov=cfmm2tar --cov-report=xml
+```
+
+Coverage reports are automatically generated in CI/CD and uploaded as artifacts.
 
 ### Continuous Integration
 
 The project uses GitHub Actions for automated testing. The workflow:
 1. Sets up the pixi environment
-2. Runs unit tests on every push and pull request
+2. Runs unit tests with code coverage on every push and pull request
 3. Starts a containerized dcm4chee PACS server
-4. Runs integration tests against the PACS server
-5. Reports results
+4. Runs integration tests against the PACS server with coverage
+5. Uploads coverage reports as artifacts
+6. Displays coverage summary in the workflow
 
 See [.github/workflows/test.yml](.github/workflows/test.yml) for the complete workflow.

@@ -111,6 +111,9 @@ pixi shell
 # Run unit tests only (no PACS server required)
 pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
 
+# Run unit tests with coverage
+pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v --cov=cfmm2tar --cov-report=term-missing
+
 # Run integration tests (requires Docker)
 cd tests
 docker compose up -d
@@ -131,7 +134,33 @@ pixi run pytest tests/test_dcm4che_utils.py::TestDcm4cheUtilsUnit -v
 
 # Run all tests
 pixi run pytest tests/ -v
+
+# Run all tests with coverage
+pixi run pytest tests/ -v --cov=cfmm2tar --cov-report=term-missing --cov-report=html
 ```
+
+### Code Coverage
+
+Always check code coverage when adding new features or tests:
+
+```bash
+# Run tests with coverage
+pytest tests/ --cov=cfmm2tar --cov-report=term-missing --cov-report=html
+
+# View detailed HTML coverage report
+open htmlcov/index.html  # macOS
+xdg-open htmlcov/index.html  # Linux
+
+# Check coverage for specific modules
+pytest tests/ --cov=cfmm2tar.dcm4che_utils --cov-report=term-missing
+```
+
+Coverage reports show:
+- Which lines of code are executed during tests
+- Which branches and edge cases need additional test coverage
+- Overall project code coverage percentage
+
+Aim to maintain or improve coverage when contributing new code.
 
 ### Writing Tests
 
