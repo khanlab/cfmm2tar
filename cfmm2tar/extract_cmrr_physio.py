@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
 """
-unwrap convert SIEMENS physio MR dicom. re-implement https://github.com/CMRR-C2P/MB extractCMRRPhysio.m in pyton
+unwrap convert SIEMENS physio MR dicom. re-implement https://github.com/CMRR-C2P/MB extractCMRRPhysio.m in python
 
 Author: YingLi Lu
 Email:  yinglilu@gmail.com
 Date:   2018-05-24
 
 note:
-    Tested on ubuntu 16.04, python 2.7.14
+    Cross-platform compatible. Tested on Ubuntu 16.04+, Python 3.11+
 """
 
 import logging
