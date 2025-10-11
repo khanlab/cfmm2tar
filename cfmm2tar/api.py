@@ -13,9 +13,66 @@ from typing import Any
 from . import dcm4che_utils, retrieve_cfmm_tar
 
 
+def _get_credentials(username: str | None = None, password: str | None = None) -> tuple[str, str]:
+    """
+    Get credentials from various sources in order of precedence.
+
+    Order of precedence:
+    1. Provided username/password parameters
+    2. ~/.uwo_credentials file
+    3. Environment variables (UWO_USERNAME, UWO_PASSWORD)
+
+    Args:
+        username: Optional username (takes precedence if provided)
+        password: Optional password (takes precedence if provided)
+
+    Returns:
+        Tuple of (username, password)
+
+    Raises:
+        ValueError: If credentials cannot be found from any source
+    """
+    # If both provided, use them
+    if username is not None and password is not None:
+        return username, password
+
+    # Try to read from credentials file
+    credentials_file = os.path.expanduser("~/.uwo_credentials")
+    if os.path.exists(credentials_file):
+        try:
+            with open(credentials_file) as f:
+                lines = f.read().splitlines()
+                if len(lines) >= 2:
+                    file_username = lines[0].strip()
+                    file_password = lines[1].strip()
+                    # Use file credentials for any missing values
+                    if username is None:
+                        username = file_username
+                    if password is None:
+                        password = file_password
+        except Exception:
+            pass  # Continue to environment variables if file reading fails
+
+    # Try environment variables for any still-missing values
+    if username is None:
+        username = os.environ.get("UWO_USERNAME")
+    if password is None:
+        password = os.environ.get("UWO_PASSWORD")
+
+    # Validate we have both
+    if username is None or password is None:
+        raise ValueError(
+            "Credentials not found. Please provide username/password, "
+            "create ~/.uwo_credentials file (line 1: username, line 2: password), "
+            "or set UWO_USERNAME and UWO_PASSWORD environment variables."
+        )
+
+    return username, password
+
+
 def query_metadata(
-    username: str,
-    password: str,
+    username: str | None = None,
+    password: str | None = None,
     study_description: str = "*",
     study_date: str = "-",
     patient_name: str = "*",
@@ -30,9 +87,14 @@ def query_metadata(
     This function queries the DICOM server and returns study metadata. It can return
     results as either a list of dictionaries or as a pandas DataFrame (if pandas is installed).
 
+    Credentials are obtained in the following order of precedence:
+    1. Provided username/password parameters
+    2. ~/.uwo_credentials file (line 1: username, line 2: password)
+    3. Environment variables (UWO_USERNAME, UWO_PASSWORD)
+
     Args:
-        username: UWO username for authentication
-        password: UWO password for authentication
+        username: UWO username for authentication (optional, see credential precedence above)
+        password: UWO password for authentication (optional, see credential precedence above)
         study_description: Study description / Principal^Project search string (default: "*" for all)
         study_date: Date search string (default: "-" for all dates)
                    Can be a single date (YYYYMMDD), date range (YYYYMMDD-YYYYMMDD),
@@ -56,29 +118,38 @@ def query_metadata(
             (requires pandas to be installed)
 
     Raises:
+        ValueError: If credentials cannot be found from any source
         ImportError: If return_type="dataframe" but pandas is not installed
         Exception: If there are errors connecting to the DICOM server
 
     Example:
+        Using credentials from ~/.uwo_credentials:
         >>> from cfmm2tar.api import query_metadata
+        >>> studies = query_metadata(
+        ...     study_description="Khan^NeuroAnalytics",
+        ...     study_date="20240101-20240131"
+        ... )
+        >>> print(f"Found {len(studies)} studies")
+
+        Providing credentials explicitly:
         >>> studies = query_metadata(
         ...     username="myuser",
         ...     password="mypass",
         ...     study_description="Khan^NeuroAnalytics",
         ...     study_date="20240101-20240131"
         ... )
-        >>> print(f"Found {len(studies)} studies")
 
         Using with DataFrame:
         >>> import pandas as pd
         >>> df = query_metadata(
-        ...     username="myuser",
-        ...     password="mypass",
         ...     study_description="Khan^*",
         ...     return_type="dataframe"
         ... )
         >>> print(df.head())
     """
+    # Get credentials
+    username, password = _get_credentials(username, password)
+
     # Validate return_type
     if return_type not in ["list", "dataframe"]:
         raise ValueError(f"return_type must be 'list' or 'dataframe', got: {return_type}")
@@ -116,9 +187,9 @@ def query_metadata(
 
 
 def download_studies(
-    username: str,
-    password: str,
     output_dir: str,
+    username: str | None = None,
+    password: str | None = None,
     study_description: str = "*",
     study_date: str = "-",
     patient_name: str = "*",
@@ -136,10 +207,15 @@ def download_studies(
     tar archives in the output directory. Study metadata is automatically saved to
     a TSV file in the output directory.
 
+    Credentials are obtained in the following order of precedence:
+    1. Provided username/password parameters
+    2. ~/.uwo_credentials file (line 1: username, line 2: password)
+    3. Environment variables (UWO_USERNAME, UWO_PASSWORD)
+
     Args:
-        username: UWO username for authentication
-        password: UWO password for authentication
         output_dir: Output directory for tar archives and metadata
+        username: UWO username for authentication (optional, see credential precedence above)
+        password: UWO password for authentication (optional, see credential precedence above)
         study_description: Study description / Principal^Project search string (default: "*" for all)
         study_date: Date search string (default: "-" for all dates)
         patient_name: PatientName search string (default: "*" for all names)
@@ -155,27 +231,37 @@ def download_studies(
         Path to the output directory containing the downloaded tar files
 
     Raises:
+        ValueError: If credentials cannot be found from any source
         Exception: If there are errors downloading or processing the studies
 
     Example:
+        Using credentials from ~/.uwo_credentials:
         >>> from cfmm2tar.api import download_studies
         >>> output = download_studies(
-        ...     username="myuser",
-        ...     password="mypass",
         ...     output_dir="/path/to/output",
         ...     study_description="Khan^NeuroAnalytics",
         ...     study_date="20240101"
         ... )
         >>> print(f"Downloaded studies to: {output}")
 
-        Download a specific study by UID:
-        >>> download_studies(
+        Providing credentials explicitly:
+        >>> output = download_studies(
+        ...     output_dir="/path/to/output",
         ...     username="myuser",
         ...     password="mypass",
+        ...     study_description="Khan^NeuroAnalytics",
+        ...     study_date="20240101"
+        ... )
+
+        Download a specific study by UID:
+        >>> download_studies(
         ...     output_dir="/path/to/output",
         ...     study_instance_uid="1.2.840.113619.2.55.3.1234567890.123"
         ... )
     """
+    # Get credentials
+    username, password = _get_credentials(username, password)
+
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)
 
@@ -216,10 +302,10 @@ def download_studies(
 
 
 def download_studies_from_metadata(
-    username: str,
-    password: str,
     output_dir: str,
     metadata: str | list[dict[str, Any]] | Any,
+    username: str | None = None,
+    password: str | None = None,
     temp_dir: str | None = None,
     dicom_server: str = "CFMM@dicom.cfmm.uwo.ca:11112",
     dcm4che_options: str = "",
@@ -232,14 +318,19 @@ def download_studies_from_metadata(
     This function downloads studies specified by StudyInstanceUIDs from either a
     metadata file (TSV), a list of dictionaries, or a pandas DataFrame.
 
+    Credentials are obtained in the following order of precedence:
+    1. Provided username/password parameters
+    2. ~/.uwo_credentials file (line 1: username, line 2: password)
+    3. Environment variables (UWO_USERNAME, UWO_PASSWORD)
+
     Args:
-        username: UWO username for authentication
-        password: UWO password for authentication
         output_dir: Output directory for tar archives and metadata
         metadata: Either:
                  - Path to TSV metadata file with StudyInstanceUID column
                  - List of dictionaries with 'StudyInstanceUID' key
                  - pandas DataFrame with 'StudyInstanceUID' column
+        username: UWO username for authentication (optional, see credential precedence above)
+        password: UWO password for authentication (optional, see credential precedence above)
         temp_dir: Temporary directory for intermediate DICOM files (default: system temp)
         dicom_server: DICOM server connection string (default: "CFMM@dicom.cfmm.uwo.ca:11112")
         dcm4che_options: Additional options to pass to dcm4che tools (default: "")
@@ -250,17 +341,23 @@ def download_studies_from_metadata(
         Path to the output directory containing the downloaded tar files
 
     Raises:
-        ValueError: If metadata format is invalid or no StudyInstanceUIDs found
+        ValueError: If credentials or metadata format is invalid, or no StudyInstanceUIDs found
         Exception: If there are errors downloading or processing the studies
 
     Example:
-        Using a TSV file:
+        Using a TSV file with credentials from ~/.uwo_credentials:
         >>> from cfmm2tar.api import download_studies_from_metadata
         >>> download_studies_from_metadata(
-        ...     username="myuser",
-        ...     password="mypass",
         ...     output_dir="/path/to/output",
         ...     metadata="study_metadata.tsv"
+        ... )
+
+        Providing credentials explicitly:
+        >>> download_studies_from_metadata(
+        ...     output_dir="/path/to/output",
+        ...     metadata="study_metadata.tsv",
+        ...     username="myuser",
+        ...     password="mypass"
         ... )
 
         Using a DataFrame:
@@ -270,8 +367,6 @@ def download_studies_from_metadata(
         ...     'PatientName': ['Patient1', 'Patient2']
         ... })
         >>> download_studies_from_metadata(
-        ...     username="myuser",
-        ...     password="mypass",
         ...     output_dir="/path/to/output",
         ...     metadata=df
         ... )
@@ -282,12 +377,13 @@ def download_studies_from_metadata(
         ...     {'StudyInstanceUID': '5.6.7.8', 'PatientName': 'Patient2'}
         ... ]
         >>> download_studies_from_metadata(
-        ...     username="myuser",
-        ...     password="mypass",
         ...     output_dir="/path/to/output",
         ...     metadata=studies
         ... )
     """
+    # Get credentials
+    username, password = _get_credentials(username, password)
+
     # Extract UIDs based on metadata type
     uids = []
 

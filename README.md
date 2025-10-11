@@ -177,6 +177,45 @@ pip install cfmm2tar[dataframe]
 
 **Note:** The Python API requires dcm4che tools to be installed separately, or you can use the `--dcm4che-container` option (future feature) to point to a container with dcm4che.
 
+### Credential Management
+
+The API functions automatically handle credentials in the following order of precedence:
+
+1. **Provided parameters**: `username` and `password` arguments (if supplied)
+2. **Credentials file**: `~/.uwo_credentials` (line 1: username, line 2: password)
+3. **Environment variables**: `UWO_USERNAME` and `UWO_PASSWORD`
+
+This means you can use the API without explicitly passing credentials in most cases:
+
+```python
+from cfmm2tar import query_metadata
+
+# Credentials automatically loaded from ~/.uwo_credentials or environment variables
+studies = query_metadata(
+    study_description="Khan^NeuroAnalytics",
+    study_date="20240101-20240131"
+)
+```
+
+Or provide credentials explicitly when needed:
+
+```python
+studies = query_metadata(
+    username="your_username",
+    password="your_password",
+    study_description="Khan^NeuroAnalytics",
+    study_date="20240101-20240131"
+)
+```
+
+Or use environment variables in scripts or CI/CD:
+
+```bash
+export UWO_USERNAME="your_username"
+export UWO_PASSWORD="your_password"
+python your_script.py
+```
+
 ### Query Metadata
 
 Query study metadata and get results as a list of dictionaries or pandas DataFrame:
@@ -184,10 +223,8 @@ Query study metadata and get results as a list of dictionaries or pandas DataFra
 ```python
 from cfmm2tar import query_metadata
 
-# Query metadata and get as list of dicts
+# Query metadata (credentials from ~/.uwo_credentials or env vars)
 studies = query_metadata(
-    username="your_username",
-    password="your_password",
     study_description="Khan^NeuroAnalytics",
     study_date="20240101-20240131",
     patient_name="*",
@@ -207,8 +244,6 @@ from cfmm2tar import query_metadata
 
 # Query metadata and get as DataFrame
 df = query_metadata(
-    username="your_username",
-    password="your_password",
     study_description="Khan^*",
     study_date="20240101-",
     return_type="dataframe"
@@ -226,10 +261,8 @@ Download studies programmatically:
 ```python
 from cfmm2tar import download_studies
 
-# Download studies matching criteria
+# Download studies matching criteria (credentials from ~/.uwo_credentials or env vars)
 output_dir = download_studies(
-    username="your_username",
-    password="your_password",
     output_dir="/path/to/output",
     study_description="Khan^NeuroAnalytics",
     study_date="20240101",
@@ -245,8 +278,6 @@ Download a specific study by UID:
 from cfmm2tar import download_studies
 
 download_studies(
-    username="your_username",
-    password="your_password",
     output_dir="/path/to/output",
     study_instance_uid="1.2.840.113619.2.55.3.1234567890.123"
 )
@@ -259,22 +290,18 @@ Download studies using metadata from various sources:
 ```python
 from cfmm2tar import download_studies_from_metadata
 
-# From a list of study metadata dicts
+# From a list of study metadata dicts (credentials from ~/.uwo_credentials or env vars)
 studies = [
     {'StudyInstanceUID': '1.2.3.4', 'PatientName': 'Patient1'},
     {'StudyInstanceUID': '5.6.7.8', 'PatientName': 'Patient2'}
 ]
 download_studies_from_metadata(
-    username="your_username",
-    password="your_password",
     output_dir="/path/to/output",
     metadata=studies
 )
 
 # From a TSV file
 download_studies_from_metadata(
-    username="your_username",
-    password="your_password",
     output_dir="/path/to/output",
     metadata="study_metadata.tsv"
 )
@@ -284,8 +311,6 @@ import pandas as pd
 df = pd.read_csv("study_metadata.tsv", sep="\t")
 filtered_df = df[df['StudyDate'] > '20240101']
 download_studies_from_metadata(
-    username="your_username",
-    password="your_password",
     output_dir="/path/to/output",
     metadata=filtered_df
 )
@@ -299,10 +324,8 @@ Here's a complete workflow that queries metadata, filters studies, and downloads
 from cfmm2tar import query_metadata, download_studies_from_metadata
 import pandas as pd
 
-# Step 1: Query all available studies
+# Step 1: Query all available studies (credentials from ~/.uwo_credentials or env vars)
 studies_df = query_metadata(
-    username="your_username",
-    password="your_password",
     study_description="Khan^*",
     study_date="20240101-20240131",
     return_type="dataframe"
@@ -320,8 +343,6 @@ print(f"Filtered to {len(filtered_df)} studies")
 
 # Step 3: Download the filtered studies
 download_studies_from_metadata(
-    username="your_username",
-    password="your_password",
     output_dir="/path/to/output",
     metadata=filtered_df
 )
@@ -342,9 +363,8 @@ rule query_studies:
     output:
         "metadata/study_list.tsv"
     run:
+        # Credentials automatically loaded from env vars or ~/.uwo_credentials
         studies = query_metadata(
-            username=config["username"],
-            password=config["password"],
             study_description=config["project"],
             study_date=config["date_range"],
             return_type="dataframe"
@@ -359,8 +379,6 @@ rule download_studies:
         directory("data/dicoms")
     run:
         download_studies_from_metadata(
-            username=config["username"],
-            password=config["password"],
             output_dir=output[0],
             metadata=input[0]
         )
@@ -373,8 +391,8 @@ rule download_studies:
 Query study metadata from the DICOM server.
 
 **Parameters:**
-- `username` (str): UWO username for authentication
-- `password` (str): UWO password for authentication
+- `username` (str, optional): UWO username for authentication (see credential precedence below)
+- `password` (str, optional): UWO password for authentication (see credential precedence below)
 - `study_description` (str): Study description search string (default: "*")
 - `study_date` (str): Date search string (default: "-")
 - `patient_name` (str): PatientName search string (default: "*")
@@ -382,6 +400,11 @@ Query study metadata from the DICOM server.
 - `dcm4che_options` (str): Additional dcm4che options (default: "")
 - `force_refresh_trust_store` (bool): Force refresh trust store (default: False)
 - `return_type` (str): "list" or "dataframe" (default: "list")
+
+**Credential Precedence:**
+1. Provided `username`/`password` parameters
+2. `~/.uwo_credentials` file (line 1: username, line 2: password)
+3. `UWO_USERNAME` and `UWO_PASSWORD` environment variables
 
 **Returns:**
 - List of dicts or pandas DataFrame with study metadata
@@ -391,9 +414,9 @@ Query study metadata from the DICOM server.
 Download DICOM studies and create tar archives.
 
 **Parameters:**
-- `username` (str): UWO username for authentication
-- `password` (str): UWO password for authentication
 - `output_dir` (str): Output directory for tar archives
+- `username` (str, optional): UWO username for authentication (see credential precedence)
+- `password` (str, optional): UWO password for authentication (see credential precedence)
 - `study_description` (str): Study description search string (default: "*")
 - `study_date` (str): Date search string (default: "-")
 - `patient_name` (str): PatientName search string (default: "*")
@@ -412,10 +435,10 @@ Download DICOM studies and create tar archives.
 Download studies using UIDs from metadata source.
 
 **Parameters:**
-- `username` (str): UWO username for authentication
-- `password` (str): UWO password for authentication
 - `output_dir` (str): Output directory for tar archives
 - `metadata` (str, list, or DataFrame): Metadata source (file path, list of dicts, or DataFrame)
+- `username` (str, optional): UWO username for authentication (see credential precedence)
+- `password` (str, optional): UWO password for authentication (see credential precedence)
 - `temp_dir` (str, optional): Temporary directory for intermediate files
 - `dicom_server` (str): DICOM server connection string (default: "CFMM@dicom.cfmm.uwo.ca:11112")
 - `dcm4che_options` (str): Additional dcm4che options (default: "")
