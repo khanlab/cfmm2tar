@@ -287,8 +287,10 @@ packages:
   timestamp: 1734267180483
 - pypi: ./
   name: cfmm2tar
-  version: 2.0.3.dev40+g01bd6002c
-  sha256: 46a3bf97009974208469184af4c7374557c7529d4907cdc60f743081e6d462a1
+  version: 2.0.3.dev46+ga266ce375
+  sha256: a96a69883e4a75c8edab1eee408e1c8611b6805e73ad22dc308ee56883650996
+  requires_dist:
+  - pandas>=2.0.0 ; extra == 'dataframe'
   requires_python: '>=3.11'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/noarch/colorama-0.4.6-pyhd8ed1ab_1.conda

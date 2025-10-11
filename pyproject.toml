@@ -32,6 +32,9 @@ Documentation = "https://github.com/khanlab/cfmm2tar/blob/master/README.md"
 [project.scripts]
 cfmm2tar = "cfmm2tar.cli:main"
 
+[project.optional-dependencies]
+dataframe = ["pandas>=2.0.0"]
+
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
