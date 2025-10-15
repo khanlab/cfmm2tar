@@ -315,6 +315,10 @@ class Dcm4cheUtils:
                         elif tag == "00081030":  # StudyDescription
                             current_study["StudyDescription"] = value
 
+                # Don't forget the last study
+                if current_study.get("StudyInstanceUID"):
+                    studies.append(current_study)
+
                 # Fill in missing fields with empty strings
                 for study in studies:
                     for field in ["PatientName", "PatientID", "StudyDate", "StudyDescription"]:

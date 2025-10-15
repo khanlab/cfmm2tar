@@ -318,3 +318,190 @@ class TestDcm4cheUtilsUnit:
 
             instances = dcm4che_utils._get_NumberOfStudyRelatedInstances("-m StudyDate='*'")
             assert instances == ""
+
+    def test_xml_parsing_zero_study_metadata(self):
+        """Test parsing study metadata with zero matching studies."""
+        import xml.etree.ElementTree as ET
+        from unittest.mock import patch
+
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+
+        # Mock XML response with no studies
+        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<NativeDicomModel xml:space="preserve">
+</NativeDicomModel>
+"""
+        mock_root = ET.fromstring(mock_xml)
+
+        with patch.object(
+            dcm4che_utils, "_execute_findscu_with_xml_output", return_value=mock_root
+        ):
+            result = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
+            assert len(result) == 0
+
+    def test_xml_parsing_one_study_metadata(self):
+        """Test parsing study metadata with exactly one matching study."""
+        import xml.etree.ElementTree as ET
+        from unittest.mock import patch
+
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+
+        # Mock XML response with one study (StudyInstanceUID first)
+        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<NativeDicomModel xml:space="preserve">
+  <DicomAttribute tag="0020000D" vr="UI">
+    <Value number="1">1.2.3.4.5.6.7.8.9</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100010" vr="PN">
+    <Value number="1">Test^Patient</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100020" vr="LO">
+    <Value number="1">TEST001</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00080020" vr="DA">
+    <Value number="1">20240101</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00081030" vr="LO">
+    <Value number="1">Khan^TestProject</Value>
+  </DicomAttribute>
+</NativeDicomModel>
+"""
+        mock_root = ET.fromstring(mock_xml)
+
+        with patch.object(
+            dcm4che_utils, "_execute_findscu_with_xml_output", return_value=mock_root
+        ):
+            result = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
+            assert len(result) == 1
+            study = result[0]
+            assert study["StudyInstanceUID"] == "1.2.3.4.5.6.7.8.9"
+            assert study["PatientName"] == "Test^Patient"
+            assert study["PatientID"] == "TEST001"
+            assert study["StudyDate"] == "20240101"
+            assert study["StudyDescription"] == "Khan^TestProject"
+
+    def test_xml_parsing_two_study_metadata(self):
+        """Test parsing study metadata with exactly two matching studies."""
+        import xml.etree.ElementTree as ET
+        from unittest.mock import patch
+
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+
+        # Mock XML response with two studies
+        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<NativeDicomModel xml:space="preserve">
+  <DicomAttribute tag="0020000D" vr="UI">
+    <Value number="1">1.1.1.1.1</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100010" vr="PN">
+    <Value number="1">Patient^One</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100020" vr="LO">
+    <Value number="1">ID001</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00080020" vr="DA">
+    <Value number="1">20240101</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00081030" vr="LO">
+    <Value number="1">Khan^Project1</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="0020000D" vr="UI">
+    <Value number="1">2.2.2.2.2</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100010" vr="PN">
+    <Value number="1">Patient^Two</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100020" vr="LO">
+    <Value number="1">ID002</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00080020" vr="DA">
+    <Value number="1">20240102</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00081030" vr="LO">
+    <Value number="1">Khan^Project2</Value>
+  </DicomAttribute>
+</NativeDicomModel>
+"""
+        mock_root = ET.fromstring(mock_xml)
+
+        with patch.object(
+            dcm4che_utils, "_execute_findscu_with_xml_output", return_value=mock_root
+        ):
+            result = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
+            assert len(result) == 2
+
+            # Check first study
+            assert result[0]["StudyInstanceUID"] == "1.1.1.1.1"
+            assert result[0]["PatientName"] == "Patient^One"
+            assert result[0]["PatientID"] == "ID001"
+            assert result[0]["StudyDate"] == "20240101"
+            assert result[0]["StudyDescription"] == "Khan^Project1"
+
+            # Check second study
+            assert result[1]["StudyInstanceUID"] == "2.2.2.2.2"
+            assert result[1]["PatientName"] == "Patient^Two"
+            assert result[1]["PatientID"] == "ID002"
+            assert result[1]["StudyDate"] == "20240102"
+            assert result[1]["StudyDescription"] == "Khan^Project2"
+
+    def test_xml_parsing_three_study_metadata(self):
+        """Test parsing study metadata with exactly three matching studies."""
+        import xml.etree.ElementTree as ET
+        from unittest.mock import patch
+
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+
+        # Mock XML response with three studies
+        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<NativeDicomModel xml:space="preserve">
+  <DicomAttribute tag="0020000D" vr="UI">
+    <Value number="1">1.1.1.1.1</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100010" vr="PN">
+    <Value number="1">Patient^One</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="0020000D" vr="UI">
+    <Value number="1">2.2.2.2.2</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100010" vr="PN">
+    <Value number="1">Patient^Two</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="0020000D" vr="UI">
+    <Value number="1">3.3.3.3.3</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100010" vr="PN">
+    <Value number="1">Patient^Three</Value>
+  </DicomAttribute>
+</NativeDicomModel>
+"""
+        mock_root = ET.fromstring(mock_xml)
+
+        with patch.object(
+            dcm4che_utils, "_execute_findscu_with_xml_output", return_value=mock_root
+        ):
+            result = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
+            assert len(result) == 3
+
+            # Check all three studies
+            assert result[0]["StudyInstanceUID"] == "1.1.1.1.1"
+            assert result[0]["PatientName"] == "Patient^One"
+            assert result[1]["StudyInstanceUID"] == "2.2.2.2.2"
+            assert result[1]["PatientName"] == "Patient^Two"
+            assert result[2]["StudyInstanceUID"] == "3.3.3.3.3"
+            assert result[2]["PatientName"] == "Patient^Three"
