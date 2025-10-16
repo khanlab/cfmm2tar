@@ -346,29 +346,22 @@ class TestDcm4cheUtilsUnit:
             username="testuser",
             password="testpass",
         )
-
-        # Mock XML response with one study (StudyInstanceUID first)
         mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <NativeDicomModel xml:space="preserve">
   <DicomAttribute tag="0020000D" vr="UI">
-    <Value number="1">1.2.3.4.5.6.7.8.9</Value>
+    <Value number="1">1.1.1.1.1</Value>
   </DicomAttribute>
   <DicomAttribute tag="00100010" vr="PN">
-    <Value number="1">Test^Patient</Value>
+    <Value number="1">Patient^One</Value>
   </DicomAttribute>
   <DicomAttribute tag="00100020" vr="LO">
-    <Value number="1">TEST001</Value>
+    <Value number="1">ID001</Value>
   </DicomAttribute>
   <DicomAttribute tag="00080020" vr="DA">
     <Value number="1">20240101</Value>
   </DicomAttribute>
   <DicomAttribute tag="00081030" vr="LO">
-    <Value number="1">Khan^TestProject</Value>
-  </DicomAttribute>
-</NativeDicomModel>
-  </DicomAttribute>
-  <DicomAttribute tag="00081030" vr="LO">
-    <Value number="1">Khan^TestProject</Value>
+    <Value number="1">Khan^Project1</Value>
   </DicomAttribute>
 </NativeDicomModel>
 """
@@ -380,11 +373,11 @@ class TestDcm4cheUtilsUnit:
             result = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
             assert len(result) == 1
             study = result[0]
-            assert study["StudyInstanceUID"] == "1.2.3.4.5.6.7.8.9"
-            assert study["PatientName"] == "Test^Patient"
-            assert study["PatientID"] == "TEST001"
+            assert study["StudyInstanceUID"] == "1.1.1.1.1"
+            assert study["PatientName"] == "Patient^One"
+            assert study["PatientID"] == "ID001"
             assert study["StudyDate"] == "20240101"
-            assert study["StudyDescription"] == "Khan^TestProject"
+            assert study["StudyDescription"] == "Khan^Project1"
 
     def test_xml_parsing_two_study_metadata(self):
         """Test parsing study metadata with exactly two matching studies."""
