@@ -13,7 +13,9 @@ from typing import Any
 from . import dcm4che_utils, retrieve_cfmm_tar
 
 
-def _get_credentials(username: str | None = None, password: str | None = None) -> tuple[str, str]:
+def _get_credentials(
+    username: str | None = None, password: str | None = None, credentials_file: str | None = None
+) -> tuple[str, str]:
     """
     Get credentials from various sources in order of precedence.
 
@@ -36,28 +38,33 @@ def _get_credentials(username: str | None = None, password: str | None = None) -
     if username is not None and password is not None:
         return username, password
 
-    # Try to read from credentials file
-    credentials_file = os.path.expanduser("~/.uwo_credentials")
-    if os.path.exists(credentials_file):
-        try:
-            with open(credentials_file) as f:
-                lines = f.read().splitlines()
-                if len(lines) >= 2:
-                    file_username = lines[0].strip()
-                    file_password = lines[1].strip()
-                    # Use file credentials for any missing values
-                    if username is None:
-                        username = file_username
-                    if password is None:
-                        password = file_password
-        except Exception:
-            pass  # Continue to environment variables if file reading fails
-
     # Try environment variables for any still-missing values
     if username is None:
         username = os.environ.get("UWO_USERNAME")
     if password is None:
         password = os.environ.get("UWO_PASSWORD")
+
+    # Try to read from credentials file
+    if username is None or password is None:
+        if credentials_file is None:
+            credentials_file = os.path.expanduser("~/.uwo_credentials")
+        else:
+            credentials_file = os.path.expanduser(credentials_file)
+
+        if os.path.exists(credentials_file):
+            try:
+                with open(credentials_file) as f:
+                    lines = f.read().splitlines()
+                    if len(lines) >= 2:
+                        file_username = lines[0].strip()
+                        file_password = lines[1].strip()
+                        # Use file credentials for any missing values
+                        if username is None:
+                            username = file_username
+                        if password is None:
+                            password = file_password
+            except Exception:
+                pass  # Continue to environment variables if file reading fails
 
     # Validate we have both
     if username is None or password is None:
@@ -73,6 +80,7 @@ def _get_credentials(username: str | None = None, password: str | None = None) -
 def query_metadata(
     username: str | None = None,
     password: str | None = None,
+    credentials_file: str | None = None,
     study_description: str = "*",
     study_date: str = "-",
     patient_name: str = "*",
@@ -89,12 +97,13 @@ def query_metadata(
 
     Credentials are obtained in the following order of precedence:
     1. Provided username/password parameters
-    2. ~/.uwo_credentials file (line 1: username, line 2: password)
-    3. Environment variables (UWO_USERNAME, UWO_PASSWORD)
+    2. Environment variables (UWO_USERNAME, UWO_PASSWORD)
+    3. Credential file
 
     Args:
         username: UWO username for authentication (optional, see credential precedence above)
         password: UWO password for authentication (optional, see credential precedence above)
+        credentials_file: Path to a credentials plain-text file (line 1: username, line 2: password) (default: ~/.uwo_credentials)
         study_description: Study description / Principal^Project search string (default: "*" for all)
         study_date: Date search string (default: "-" for all dates)
                    Can be a single date (YYYYMMDD), date range (YYYYMMDD-YYYYMMDD),
@@ -148,7 +157,7 @@ def query_metadata(
         >>> print(df.head())
     """
     # Get credentials
-    username, password = _get_credentials(username, password)
+    username, password = _get_credentials(username, password, credentials_file)
 
     # Validate return_type
     if return_type not in ["list", "dataframe"]:
