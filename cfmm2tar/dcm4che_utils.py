@@ -162,6 +162,77 @@ class Dcm4cheUtils:
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir)
 
+    def _execute_findscu_with_xml_output_per_study(self, matching_key, return_tags):
+        """
+        Execute findscu command with XML output and return a list of parsed XML roots.
+        
+        Each XML file from findscu represents one study. This method returns them as separate
+        root elements to preserve study boundaries.
+
+        Args:
+            matching_key: The matching key for the query (e.g., "-m StudyDescription='Khan*'")
+            return_tags: List of DICOM tags to return (e.g., ["StudyInstanceUID", "PatientName"])
+
+        Returns:
+            list: List of ET.Element root elements, one per study, or empty list if no results
+        """
+        # Create a temporary directory for XML output
+        temp_dir = tempfile.mkdtemp(prefix="cfmm2tar_xml_")
+
+        try:
+            # Build the findscu command with XML output to file
+            cmd = self._findscu_str + f""" {matching_key}"""
+
+            # Add return tags
+            for tag in return_tags:
+                cmd += f" -r {tag}"
+
+            # Add XML output options (without --out-cat so each study gets its own file)
+            cmd += f" --xml --indent --out-dir {temp_dir}"
+
+            # Execute the command
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            out, err = proc.communicate()
+
+            # Check for errors
+            if err:
+                # Ignore the annoying Java info message
+                if (
+                    err != b"Picked up _JAVA_OPTIONS: -Xmx2048m\n"
+                    and err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n"
+                ):
+                    self.logger.error(err)
+
+            # Find all XML files in the temporary directory (001.dcm, 002.dcm, etc.)
+            xml_files = sorted([f for f in os.listdir(temp_dir) if f.endswith(".dcm")])
+
+            if not xml_files:
+                self.logger.warning(f"No XML output files found in: {temp_dir}")
+                return []
+
+            # Parse each XML file and return as separate roots
+            roots = []
+            for xml_file in xml_files:
+                xml_file_path = os.path.join(temp_dir, xml_file)
+                try:
+                    tree = ET.parse(xml_file_path)
+                    root = tree.getroot()
+                    roots.append(root)
+
+                except ET.ParseError as e:
+                    self.logger.error(f"Error parsing XML file {xml_file}: {e}")
+                    continue
+                except Exception as e:
+                    self.logger.error(f"Error reading XML file {xml_file}: {e}")
+                    continue
+
+            return roots
+
+        finally:
+            # Clean up the temporary directory
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+
     def _get_NumberOfStudyRelatedInstances(self, matching_key):
         """
         get StudyInstanceUID list by matching key
@@ -267,7 +338,7 @@ class Dcm4cheUtils:
                   'PatientID': '...'},
                  ...]
         """
-        # Execute findscu with XML output to file
+        # Execute findscu with XML output to file - get one root per study
         return_tags = [
             "StudyInstanceUID",
             "PatientName",
@@ -275,23 +346,15 @@ class Dcm4cheUtils:
             "StudyDescription",
             "PatientID",
         ]
-        root = self._execute_findscu_with_xml_output(matching_key, return_tags)
+        roots = self._execute_findscu_with_xml_output_per_study(matching_key, return_tags)
 
-        # Parse the XML output
+        # Parse each study's XML individually
         studies = []
-        if root is not None:
+        for root in roots:
             try:
-                # Each NativeDicomModel represents one study result
-                # The structure groups multiple DicomAttribute elements per study
-                # We need to group them properly
-
-                # dcm4che XML output wraps each C-FIND response in a separate structure
-                # For findscu, we look for groups of DicomAttribute elements
-                # that together form a complete study
-
-                current_study = {}
-
-                # Iterate through all DicomAttribute elements
+                study = {}
+                
+                # Extract values from this study's XML
                 for attr in root.findall(".//DicomAttribute"):
                     tag = attr.get("tag")
                     value_elem = attr.find("Value")
@@ -301,32 +364,27 @@ class Dcm4cheUtils:
 
                         # Map DICOM tags to field names
                         if tag == "0020000D":  # StudyInstanceUID
-                            # If we already have a study in progress, save it
-                            if current_study.get("StudyInstanceUID"):
-                                studies.append(current_study)
-                                current_study = {}
-                            current_study["StudyInstanceUID"] = value
+                            study["StudyInstanceUID"] = value
                         elif tag == "00100010":  # PatientName
-                            current_study["PatientName"] = value
+                            study["PatientName"] = value
                         elif tag == "00100020":  # PatientID
-                            current_study["PatientID"] = value
+                            study["PatientID"] = value
                         elif tag == "00080020":  # StudyDate
-                            current_study["StudyDate"] = value
+                            study["StudyDate"] = value
                         elif tag == "00081030":  # StudyDescription
-                            current_study["StudyDescription"] = value
+                            study["StudyDescription"] = value
 
-                # Don't forget the last study
-                if current_study.get("StudyInstanceUID"):
-                    studies.append(current_study)
-
-                # Fill in missing fields with empty strings
-                for study in studies:
+                # Only add study if it has a StudyInstanceUID
+                if study.get("StudyInstanceUID"):
+                    # Fill in missing fields with empty strings
                     for field in ["PatientName", "PatientID", "StudyDate", "StudyDescription"]:
                         if field not in study:
                             study[field] = ""
+                    studies.append(study)
 
             except Exception as e:
-                self.logger.error(f"Error processing XML: {e}")
+                self.logger.error(f"Error processing study XML: {e}")
+                continue
 
         return studies
 

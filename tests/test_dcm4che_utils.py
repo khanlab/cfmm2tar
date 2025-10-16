@@ -247,7 +247,7 @@ class TestDcm4cheUtilsUnit:
         mock_root = ET.fromstring(mock_xml)
 
         with patch.object(
-            dcm4che_utils, "_execute_findscu_with_xml_output", return_value=mock_root
+            dcm4che_utils, "_execute_findscu_with_xml_output_per_study", return_value=[mock_root]
         ):
             result = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
             assert len(result) == 1
@@ -330,15 +330,9 @@ class TestDcm4cheUtilsUnit:
             password="testpass",
         )
 
-        # Mock XML response with no studies
-        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
-<NativeDicomModel xml:space="preserve">
-</NativeDicomModel>
-"""
-        mock_root = ET.fromstring(mock_xml)
-
+        # Mock empty list for no studies
         with patch.object(
-            dcm4che_utils, "_execute_findscu_with_xml_output", return_value=mock_root
+            dcm4che_utils, "_execute_findscu_with_xml_output_per_study", return_value=[]
         ):
             result = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
             assert len(result) == 0
@@ -373,11 +367,16 @@ class TestDcm4cheUtilsUnit:
     <Value number="1">Khan^TestProject</Value>
   </DicomAttribute>
 </NativeDicomModel>
+  </DicomAttribute>
+  <DicomAttribute tag="00081030" vr="LO">
+    <Value number="1">Khan^TestProject</Value>
+  </DicomAttribute>
+</NativeDicomModel>
 """
         mock_root = ET.fromstring(mock_xml)
 
         with patch.object(
-            dcm4che_utils, "_execute_findscu_with_xml_output", return_value=mock_root
+            dcm4che_utils, "_execute_findscu_with_xml_output_per_study", return_value=[mock_root]
         ):
             result = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
             assert len(result) == 1
@@ -399,8 +398,8 @@ class TestDcm4cheUtilsUnit:
             password="testpass",
         )
 
-        # Mock XML response with two studies
-        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
+        # Mock XML response with two studies - each as a separate root
+        study1_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <NativeDicomModel xml:space="preserve">
   <DicomAttribute tag="0020000D" vr="UI">
     <Value number="1">1.1.1.1.1</Value>
@@ -417,6 +416,10 @@ class TestDcm4cheUtilsUnit:
   <DicomAttribute tag="00081030" vr="LO">
     <Value number="1">Khan^Project1</Value>
   </DicomAttribute>
+</NativeDicomModel>
+"""
+        study2_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<NativeDicomModel xml:space="preserve">
   <DicomAttribute tag="0020000D" vr="UI">
     <Value number="1">2.2.2.2.2</Value>
   </DicomAttribute>
@@ -434,10 +437,10 @@ class TestDcm4cheUtilsUnit:
   </DicomAttribute>
 </NativeDicomModel>
 """
-        mock_root = ET.fromstring(mock_xml)
+        mock_roots = [ET.fromstring(study1_xml), ET.fromstring(study2_xml)]
 
         with patch.object(
-            dcm4che_utils, "_execute_findscu_with_xml_output", return_value=mock_root
+            dcm4che_utils, "_execute_findscu_with_xml_output_per_study", return_value=mock_roots
         ):
             result = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
             assert len(result) == 2
@@ -467,8 +470,8 @@ class TestDcm4cheUtilsUnit:
             password="testpass",
         )
 
-        # Mock XML response with three studies
-        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
+        # Mock XML response with three studies - each as a separate root
+        study1_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <NativeDicomModel xml:space="preserve">
   <DicomAttribute tag="0020000D" vr="UI">
     <Value number="1">1.1.1.1.1</Value>
@@ -476,12 +479,20 @@ class TestDcm4cheUtilsUnit:
   <DicomAttribute tag="00100010" vr="PN">
     <Value number="1">Patient^One</Value>
   </DicomAttribute>
+</NativeDicomModel>
+"""
+        study2_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<NativeDicomModel xml:space="preserve">
   <DicomAttribute tag="0020000D" vr="UI">
     <Value number="1">2.2.2.2.2</Value>
   </DicomAttribute>
   <DicomAttribute tag="00100010" vr="PN">
     <Value number="1">Patient^Two</Value>
   </DicomAttribute>
+</NativeDicomModel>
+"""
+        study3_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<NativeDicomModel xml:space="preserve">
   <DicomAttribute tag="0020000D" vr="UI">
     <Value number="1">3.3.3.3.3</Value>
   </DicomAttribute>
@@ -490,10 +501,14 @@ class TestDcm4cheUtilsUnit:
   </DicomAttribute>
 </NativeDicomModel>
 """
-        mock_root = ET.fromstring(mock_xml)
+        mock_roots = [
+            ET.fromstring(study1_xml),
+            ET.fromstring(study2_xml),
+            ET.fromstring(study3_xml),
+        ]
 
         with patch.object(
-            dcm4che_utils, "_execute_findscu_with_xml_output", return_value=mock_root
+            dcm4che_utils, "_execute_findscu_with_xml_output_per_study", return_value=mock_roots
         ):
             result = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
             assert len(result) == 3
@@ -505,3 +520,130 @@ class TestDcm4cheUtilsUnit:
             assert result[1]["PatientName"] == "Patient^Two"
             assert result[2]["StudyInstanceUID"] == "3.3.3.3.3"
             assert result[2]["PatientName"] == "Patient^Three"
+
+    def test_metadata_tsv_output(self):
+        """Test that metadata can be written to TSV and all fields are preserved."""
+        import csv
+        import io
+        import xml.etree.ElementTree as ET
+        from unittest.mock import patch
+
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+
+        # Create mock data for 3 studies to test the reported bug
+        study1_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<NativeDicomModel xml:space="preserve">
+  <DicomAttribute tag="0020000D" vr="UI">
+    <Value number="1">1.1.1.1.1</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100010" vr="PN">
+    <Value number="1">Patient^One</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100020" vr="LO">
+    <Value number="1">ID001</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00080020" vr="DA">
+    <Value number="1">20240101</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00081030" vr="LO">
+    <Value number="1">Khan^Project1</Value>
+  </DicomAttribute>
+</NativeDicomModel>
+"""
+        study2_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<NativeDicomModel xml:space="preserve">
+  <DicomAttribute tag="0020000D" vr="UI">
+    <Value number="1">2.2.2.2.2</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100010" vr="PN">
+    <Value number="1">Patient^Two</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100020" vr="LO">
+    <Value number="1">ID002</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00080020" vr="DA">
+    <Value number="1">20240102</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00081030" vr="LO">
+    <Value number="1">Khan^Project2</Value>
+  </DicomAttribute>
+</NativeDicomModel>
+"""
+        study3_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<NativeDicomModel xml:space="preserve">
+  <DicomAttribute tag="0020000D" vr="UI">
+    <Value number="1">3.3.3.3.3</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100010" vr="PN">
+    <Value number="1">Patient^Three</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100020" vr="LO">
+    <Value number="1">ID003</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00080020" vr="DA">
+    <Value number="1">20240103</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00081030" vr="LO">
+    <Value number="1">Khan^Project3</Value>
+  </DicomAttribute>
+</NativeDicomModel>
+"""
+        mock_roots = [
+            ET.fromstring(study1_xml),
+            ET.fromstring(study2_xml),
+            ET.fromstring(study3_xml),
+        ]
+
+        with patch.object(
+            dcm4che_utils, "_execute_findscu_with_xml_output_per_study", return_value=mock_roots
+        ):
+            studies = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
+
+            # Write to TSV (simulating what cli.py does)
+            output = io.StringIO()
+            fieldnames = [
+                "StudyInstanceUID",
+                "PatientName",
+                "PatientID",
+                "StudyDate",
+                "StudyDescription",
+            ]
+            writer = csv.DictWriter(output, fieldnames=fieldnames, delimiter="\t")
+            writer.writeheader()
+            for study in studies:
+                writer.writerow(study)
+
+            # Read back the TSV and validate all fields are present
+            output.seek(0)
+            reader = csv.DictReader(output, delimiter="\t")
+            rows = list(reader)
+
+            # Verify we have 3 rows
+            assert len(rows) == 3, f"Expected 3 rows, got {len(rows)}"
+
+            # Verify each row has all fields populated (not empty)
+            for i, row in enumerate(rows):
+                row_num = i + 1
+                assert row["StudyInstanceUID"], f"Row {row_num}: StudyInstanceUID is empty"
+                assert row["PatientName"], f"Row {row_num}: PatientName is empty"
+                assert row["PatientID"], f"Row {row_num}: PatientID is empty"
+                assert row["StudyDate"], f"Row {row_num}: StudyDate is empty"
+                assert row["StudyDescription"], f"Row {row_num}: StudyDescription is empty"
+
+            # Verify specific values for each row
+            assert rows[0]["StudyInstanceUID"] == "1.1.1.1.1"
+            assert rows[0]["PatientName"] == "Patient^One"
+            assert rows[0]["PatientID"] == "ID001"
+
+            assert rows[1]["StudyInstanceUID"] == "2.2.2.2.2"
+            assert rows[1]["PatientName"] == "Patient^Two"
+            assert rows[1]["PatientID"] == "ID002"
+
+            assert rows[2]["StudyInstanceUID"] == "3.3.3.3.3"
+            assert rows[2]["PatientName"] == "Patient^Three"
+            assert rows[2]["PatientID"] == "ID003"
+
