@@ -321,7 +321,6 @@ class TestDcm4cheUtilsUnit:
 
     def test_xml_parsing_zero_study_metadata(self):
         """Test parsing study metadata with zero matching studies."""
-        import xml.etree.ElementTree as ET
         from unittest.mock import patch
 
         dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
@@ -646,4 +645,3 @@ class TestDcm4cheUtilsUnit:
             assert rows[2]["StudyInstanceUID"] == "3.3.3.3.3"
             assert rows[2]["PatientName"] == "Patient^Three"
             assert rows[2]["PatientID"] == "ID003"
-

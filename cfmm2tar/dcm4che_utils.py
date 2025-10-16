@@ -165,7 +165,7 @@ class Dcm4cheUtils:
     def _execute_findscu_with_xml_output_per_study(self, matching_key, return_tags):
         """
         Execute findscu command with XML output and return a list of parsed XML roots.
-        
+
         Each XML file from findscu represents one study. This method returns them as separate
         root elements to preserve study boundaries.
 
@@ -353,7 +353,7 @@ class Dcm4cheUtils:
         for root in roots:
             try:
                 study = {}
-                
+
                 # Extract values from this study's XML
                 for attr in root.findall(".//DicomAttribute"):
                     tag = attr.get("tag")
