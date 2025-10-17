@@ -12,7 +12,7 @@ Download a tarballed DICOM dataset from the CFMM DICOM server
 
 `cfmm2tar` uses [pixi](https://pixi.sh) for dependency management, which automatically handles all dependencies including Python, dcm4che tools, and required libraries.
 
-**Requirements:** 
+**Requirements:**
 - [Pixi](https://pixi.sh) package manager
 - Git
 
@@ -22,7 +22,7 @@ Download a tarballed DICOM dataset from the CFMM DICOM server
    ```bash
    curl -fsSL https://pixi.sh/install.sh | bash
    ```
-   
+
    Or on Windows:
    ```powershell
    iwr -useb https://pixi.sh/install.ps1 | iex
@@ -43,7 +43,7 @@ Download a tarballed DICOM dataset from the CFMM DICOM server
    ```bash
    # Option 1: Start a shell with the environment activated
    pixi shell
-   
+
    # Option 2: Use pixi shell-hook for automatic activation
    eval "$(pixi shell-hook)"
    ```
@@ -182,8 +182,8 @@ pip install cfmm2tar[dataframe]
 The API functions automatically handle credentials in the following order of precedence:
 
 1. **Provided parameters**: `username` and `password` arguments (if supplied)
-2. **Credentials file**: `~/.uwo_credentials` (line 1: username, line 2: password)
-3. **Environment variables**: `UWO_USERNAME` and `UWO_PASSWORD`
+2. **Environment variables**: `UWO_USERNAME` and `UWO_PASSWORD`
+3. **Credentials file**: `~/.uwo_credentials` (line 1: username, line 2: password)
 
 This means you can use the API without explicitly passing credentials in most cases:
 
@@ -393,6 +393,7 @@ Query study metadata from the DICOM server.
 **Parameters:**
 - `username` (str, optional): UWO username for authentication (see credential precedence below)
 - `password` (str, optional): UWO password for authentication (see credential precedence below)
+- `credentials_file` (str, onptional): Custom path to credentials file
 - `study_description` (str): Study description search string (default: "*")
 - `study_date` (str): Date search string (default: "-")
 - `patient_name` (str): PatientName search string (default: "*")
@@ -403,8 +404,8 @@ Query study metadata from the DICOM server.
 
 **Credential Precedence:**
 1. Provided `username`/`password` parameters
-2. `~/.uwo_credentials` file (line 1: username, line 2: password)
-3. `UWO_USERNAME` and `UWO_PASSWORD` environment variables
+2. `UWO_USERNAME` and `UWO_PASSWORD` environment variables
+3. `~/.uwo_credentials` file (line 1: username, line 2: password)
 
 **Returns:**
 - List of dicts or pandas DataFrame with study metadata
@@ -417,6 +418,7 @@ Download DICOM studies and create tar archives.
 - `output_dir` (str): Output directory for tar archives
 - `username` (str, optional): UWO username for authentication (see credential precedence)
 - `password` (str, optional): UWO password for authentication (see credential precedence)
+- `credentials_file` (str, onptional): Custom path to credentials file
 - `study_description` (str): Study description search string (default: "*")
 - `study_date` (str): Date search string (default: "-")
 - `patient_name` (str): PatientName search string (default: "*")
@@ -439,6 +441,7 @@ Download studies using UIDs from metadata source.
 - `metadata` (str, list, or DataFrame): Metadata source (file path, list of dicts, or DataFrame)
 - `username` (str, optional): UWO username for authentication (see credential precedence)
 - `password` (str, optional): UWO password for authentication (see credential precedence)
+- `credentials_file` (str, onptional): Custom path to credentials file
 - `temp_dir` (str, optional): Temporary directory for intermediate files
 - `dicom_server` (str): DICOM server connection string (default: "CFMM@dicom.cfmm.uwo.ca:11112")
 - `dcm4che_options` (str): Additional dcm4che options (default: "")

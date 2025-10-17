@@ -98,7 +98,7 @@ def query_metadata(
     Credentials are obtained in the following order of precedence:
     1. Provided username/password parameters
     2. Environment variables (UWO_USERNAME, UWO_PASSWORD)
-    3. Credential file
+    3. Credentials file
 
     Args:
         username: UWO username for authentication (optional, see credential precedence above)
