@@ -12,7 +12,7 @@ Download a tarballed DICOM dataset from the CFMM DICOM server
 
 `cfmm2tar` uses [pixi](https://pixi.sh) for dependency management, which automatically handles all dependencies including Python, dcm4che tools, and required libraries.
 
-**Requirements:** 
+**Requirements:**
 - [Pixi](https://pixi.sh) package manager
 - Git
 
@@ -22,7 +22,7 @@ Download a tarballed DICOM dataset from the CFMM DICOM server
    ```bash
    curl -fsSL https://pixi.sh/install.sh | bash
    ```
-   
+
    Or on Windows:
    ```powershell
    iwr -useb https://pixi.sh/install.ps1 | iex
@@ -43,7 +43,7 @@ Download a tarballed DICOM dataset from the CFMM DICOM server
    ```bash
    # Option 1: Start a shell with the environment activated
    pixi shell
-   
+
    # Option 2: Use pixi shell-hook for automatic activation
    eval "$(pixi shell-hook)"
    ```
@@ -160,6 +160,309 @@ This workflow is especially useful when:
 - Storage is limited and you need to select specific studies
 - You're sharing the metadata with collaborators to decide what to download
 - You need to filter studies based on multiple criteria
+
+## Python API
+
+In addition to the command-line interface, `cfmm2tar` provides a Python API for programmatic access. This is useful for integration into Python scripts, Jupyter notebooks, or workflow management tools like Snakemake.
+
+### Installation for API Use
+
+```bash
+# Basic installation
+pip install cfmm2tar
+
+# With pandas support for DataFrame operations
+pip install cfmm2tar[dataframe]
+```
+
+**Note:** The Python API requires dcm4che tools to be installed separately, or you can use the `--dcm4che-container` option (future feature) to point to a container with dcm4che.
+
+### Credential Management
+
+The API functions automatically handle credentials in the following order of precedence:
+
+1. **Provided parameters**: `username` and `password` arguments (if supplied)
+2. **Environment variables**: `UWO_USERNAME` and `UWO_PASSWORD`
+3. **Credentials file**: `~/.uwo_credentials` (line 1: username, line 2: password)
+
+This means you can use the API without explicitly passing credentials in most cases:
+
+```python
+from cfmm2tar import query_metadata
+
+# Credentials automatically loaded from ~/.uwo_credentials or environment variables
+studies = query_metadata(
+    study_description="Khan^NeuroAnalytics",
+    study_date="20240101-20240131"
+)
+```
+
+Or provide credentials explicitly when needed:
+
+```python
+studies = query_metadata(
+    username="your_username",
+    password="your_password",
+    study_description="Khan^NeuroAnalytics",
+    study_date="20240101-20240131"
+)
+```
+
+Or use environment variables in scripts or CI/CD:
+
+```bash
+export UWO_USERNAME="your_username"
+export UWO_PASSWORD="your_password"
+python your_script.py
+```
+
+### Query Metadata
+
+Query study metadata and get results as a list of dictionaries or pandas DataFrame:
+
+```python
+from cfmm2tar import query_metadata
+
+# Query metadata (credentials from ~/.uwo_credentials or env vars)
+studies = query_metadata(
+    study_description="Khan^NeuroAnalytics",
+    study_date="20240101-20240131",
+    patient_name="*",
+    return_type="list"  # or "dataframe" for pandas DataFrame
+)
+
+print(f"Found {len(studies)} studies")
+for study in studies:
+    print(f"  {study['StudyDate']}: {study['StudyDescription']}")
+```
+
+With pandas DataFrame:
+
+```python
+import pandas as pd
+from cfmm2tar import query_metadata
+
+# Query metadata and get as DataFrame
+df = query_metadata(
+    study_description="Khan^*",
+    study_date="20240101-",
+    return_type="dataframe"
+)
+
+# Filter and analyze
+recent_studies = df[df['StudyDate'] > '20240601']
+print(recent_studies[['StudyDate', 'PatientName', 'StudyDescription']])
+```
+
+### Download Studies
+
+Download studies programmatically:
+
+```python
+from cfmm2tar import download_studies
+
+# Download studies matching criteria (credentials from ~/.uwo_credentials or env vars)
+output_dir = download_studies(
+    output_dir="/path/to/output",
+    study_description="Khan^NeuroAnalytics",
+    study_date="20240101",
+    patient_name="*subj01*"
+)
+
+print(f"Studies downloaded to: {output_dir}")
+```
+
+Download a specific study by UID:
+
+```python
+from cfmm2tar import download_studies
+
+download_studies(
+    output_dir="/path/to/output",
+    study_instance_uid="1.2.840.113619.2.55.3.1234567890.123"
+)
+```
+
+### Download from Metadata
+
+Download studies using metadata from various sources:
+
+```python
+from cfmm2tar import download_studies_from_metadata
+
+# From a list of study metadata dicts (credentials from ~/.uwo_credentials or env vars)
+studies = [
+    {'StudyInstanceUID': '1.2.3.4', 'PatientName': 'Patient1'},
+    {'StudyInstanceUID': '5.6.7.8', 'PatientName': 'Patient2'}
+]
+download_studies_from_metadata(
+    output_dir="/path/to/output",
+    metadata=studies
+)
+
+# From a TSV file
+download_studies_from_metadata(
+    output_dir="/path/to/output",
+    metadata="study_metadata.tsv"
+)
+
+# From a pandas DataFrame
+import pandas as pd
+df = pd.read_csv("study_metadata.tsv", sep="\t")
+filtered_df = df[df['StudyDate'] > '20240101']
+download_studies_from_metadata(
+    output_dir="/path/to/output",
+    metadata=filtered_df
+)
+```
+
+### Complete Workflow Example
+
+Here's a complete workflow that queries metadata, filters studies, and downloads selected ones:
+
+```python
+from cfmm2tar import query_metadata, download_studies_from_metadata
+import pandas as pd
+
+# Step 1: Query all available studies (credentials from ~/.uwo_credentials or env vars)
+studies_df = query_metadata(
+    study_description="Khan^*",
+    study_date="20240101-20240131",
+    return_type="dataframe"
+)
+
+print(f"Found {len(studies_df)} total studies")
+
+# Step 2: Filter studies based on criteria
+# For example, only studies with specific patient names
+filtered_df = studies_df[
+    studies_df['PatientName'].str.contains('subj0[1-3]', regex=True)
+]
+
+print(f"Filtered to {len(filtered_df)} studies")
+
+# Step 3: Download the filtered studies
+download_studies_from_metadata(
+    output_dir="/path/to/output",
+    metadata=filtered_df
+)
+
+print("Download complete!")
+```
+
+### Use in Snakemake
+
+The Python API works seamlessly with Snakemake workflows:
+
+```python
+# Snakefile
+from cfmm2tar import query_metadata, download_studies_from_metadata
+
+# Query metadata in a rule
+rule query_studies:
+    output:
+        "metadata/study_list.tsv"
+    run:
+        # Credentials automatically loaded from env vars or ~/.uwo_credentials
+        studies = query_metadata(
+            study_description=config["project"],
+            study_date=config["date_range"],
+            return_type="dataframe"
+        )
+        studies.to_csv(output[0], sep="\t", index=False)
+
+# Download studies in another rule
+rule download_studies:
+    input:
+        "metadata/study_list.tsv"
+    output:
+        directory("data/dicoms")
+    run:
+        download_studies_from_metadata(
+            output_dir=output[0],
+            metadata=input[0]
+        )
+```
+
+### API Reference
+
+#### `query_metadata()`
+
+Query study metadata from the DICOM server.
+
+**Parameters:**
+- `username` (str, optional): UWO username for authentication (see credential precedence below)
+- `password` (str, optional): UWO password for authentication (see credential precedence below)
+- `credentials_file` (str, onptional): Custom path to credentials file
+- `study_description` (str): Study description search string (default: "*")
+- `study_date` (str): Date search string (default: "-")
+- `patient_name` (str): PatientName search string (default: "*")
+- `dicom_server` (str): DICOM server connection string (default: "CFMM@dicom.cfmm.uwo.ca:11112")
+- `dcm4che_options` (str): Additional dcm4che options (default: "")
+- `force_refresh_trust_store` (bool): Force refresh trust store (default: False)
+- `return_type` (str): "list" or "dataframe" (default: "list")
+
+**Credential Precedence:**
+1. Provided `username`/`password` parameters
+2. `UWO_USERNAME` and `UWO_PASSWORD` environment variables
+3. `~/.uwo_credentials` file (line 1: username, line 2: password)
+
+**Returns:**
+- List of dicts or pandas DataFrame with study metadata
+
+#### `download_studies()`
+
+Download DICOM studies and create tar archives.
+
+**Parameters:**
+- `output_dir` (str): Output directory for tar archives
+- `username` (str, optional): UWO username for authentication (see credential precedence)
+- `password` (str, optional): UWO password for authentication (see credential precedence)
+- `credentials_file` (str, onptional): Custom path to credentials file
+- `study_description` (str): Study description search string (default: "*")
+- `study_date` (str): Date search string (default: "-")
+- `patient_name` (str): PatientName search string (default: "*")
+- `study_instance_uid` (str): Specific StudyInstanceUID (default: "*")
+- `temp_dir` (str, optional): Temporary directory for intermediate files
+- `dicom_server` (str): DICOM server connection string (default: "CFMM@dicom.cfmm.uwo.ca:11112")
+- `dcm4che_options` (str): Additional dcm4che options (default: "")
+- `force_refresh_trust_store` (bool): Force refresh trust store (default: False)
+- `keep_sorted_dicom` (bool): Keep sorted DICOM files (default: False)
+
+**Returns:**
+- Path to output directory
+
+#### `download_studies_from_metadata()`
+
+Download studies using UIDs from metadata source.
+
+**Parameters:**
+- `output_dir` (str): Output directory for tar archives
+- `metadata` (str, list, or DataFrame): Metadata source (file path, list of dicts, or DataFrame)
+- `username` (str, optional): UWO username for authentication (see credential precedence)
+- `password` (str, optional): UWO password for authentication (see credential precedence)
+- `credentials_file` (str, onptional): Custom path to credentials file
+- `temp_dir` (str, optional): Temporary directory for intermediate files
+- `dicom_server` (str): DICOM server connection string (default: "CFMM@dicom.cfmm.uwo.ca:11112")
+- `dcm4che_options` (str): Additional dcm4che options (default: "")
+- `force_refresh_trust_store` (bool): Force refresh trust store (default: False)
+- `keep_sorted_dicom` (bool): Keep sorted DICOM files (default: False)
+
+**Returns:**
+- Path to output directory
+
+### Examples
+
+For complete working examples, see the `examples/` directory:
+
+- **`examples/api_usage.py`**: Interactive examples demonstrating various API usage patterns
+- **`examples/Snakefile_example`**: Example Snakemake workflow integrating cfmm2tar
+- **`examples/README.md`**: Detailed documentation for the examples
+
+Run the interactive examples:
+```bash
+python examples/api_usage.py
+```
 
 ## TLS Certificate Management
 

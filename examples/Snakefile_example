@@ -1,0 +1,126 @@
+"""
+Example Snakemake workflow using the cfmm2tar Python API.
+
+This demonstrates how to use cfmm2tar in a Snakemake workflow for
+automated DICOM data retrieval and processing.
+
+Usage:
+    snakemake --snakefile examples/Snakefile_example --cores 1 \
+        --config username=myuser password=mypass project="Khan^TestProject"
+"""
+
+from cfmm2tar import download_studies_from_metadata, query_metadata
+
+# Configuration
+configfile: "config.yaml"
+
+# Get credentials from config or environment
+USERNAME = config.get("username", "")
+PASSWORD = config.get("password", "")
+PROJECT = config.get("project", "Khan^*")
+DATE_RANGE = config.get("date_range", "20240101-20240131")
+
+# Target rule
+rule all:
+    input:
+        "results/study_metadata.tsv",
+        "results/data/downloaded.flag"
+
+
+# Rule to query study metadata
+rule query_metadata:
+    """Query DICOM server for study metadata."""
+    output:
+        metadata="results/study_metadata.tsv"
+    params:
+        username=USERNAME,
+        password=PASSWORD,
+        project=PROJECT,
+        date_range=DATE_RANGE
+    run:
+        import pandas as pd
+        
+        # Query metadata
+        studies_df = query_metadata(
+            username=params.username,
+            password=params.password,
+            study_description=params.project,
+            study_date=params.date_range,
+            return_type="dataframe"
+        )
+        
+        # Save to TSV
+        studies_df.to_csv(output.metadata, sep="\t", index=False)
+        
+        print(f"Found {len(studies_df)} studies")
+        print(f"Metadata saved to {output.metadata}")
+
+
+# Rule to filter studies based on custom criteria
+rule filter_studies:
+    """Filter studies based on specific criteria."""
+    input:
+        metadata="results/study_metadata.tsv"
+    output:
+        filtered="results/study_metadata_filtered.tsv"
+    run:
+        import pandas as pd
+        
+        # Read metadata
+        df = pd.read_csv(input.metadata, sep="\t")
+        
+        # Example: Filter for specific patient names
+        # Customize this filter based on your needs
+        filtered_df = df[df["PatientName"].str.contains("subj0[1-5]", regex=True, na=False)]
+        
+        # Save filtered results
+        filtered_df.to_csv(output.filtered, sep="\t", index=False)
+        
+        print(f"Filtered from {len(df)} to {len(filtered_df)} studies")
+
+
+# Rule to download DICOM studies
+rule download_studies:
+    """Download filtered DICOM studies."""
+    input:
+        metadata="results/study_metadata_filtered.tsv"
+    output:
+        flag="results/data/downloaded.flag"
+    params:
+        username=USERNAME,
+        password=PASSWORD,
+        output_dir="results/data"
+    run:
+        # Download studies from metadata
+        download_studies_from_metadata(
+            username=params.username,
+            password=params.password,
+            output_dir=params.output_dir,
+            metadata=input.metadata
+        )
+        
+        # Create flag file to mark completion
+        with open(output.flag, "w") as f:
+            f.write("Download complete\n")
+        
+        print(f"Studies downloaded to {params.output_dir}")
+
+
+# Optional: Rule to process downloaded data
+rule process_dicoms:
+    """Process downloaded DICOM tar files."""
+    input:
+        flag="results/data/downloaded.flag"
+    output:
+        summary="results/processing_summary.txt"
+    params:
+        data_dir="results/data"
+    shell:
+        """
+        # List all tar files
+        echo "Processing DICOM tar files..." > {output.summary}
+        ls -lh {params.data_dir}/*.tar >> {output.summary}
+        
+        # Add your processing commands here
+        # For example: extract, convert to BIDS, run quality checks, etc.
+        """
