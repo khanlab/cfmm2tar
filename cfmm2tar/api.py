@@ -199,6 +199,7 @@ def download_studies(
     output_dir: str,
     username: str | None = None,
     password: str | None = None,
+    credentials_file: str | None = None,
     study_description: str = "*",
     study_date: str = "-",
     patient_name: str = "*",
@@ -218,13 +219,14 @@ def download_studies(
 
     Credentials are obtained in the following order of precedence:
     1. Provided username/password parameters
-    2. ~/.uwo_credentials file (line 1: username, line 2: password)
-    3. Environment variables (UWO_USERNAME, UWO_PASSWORD)
+    2. Environment variables (UWO_USERNAME, UWO_PASSWORD)
+    3. Credentials file
 
     Args:
         output_dir: Output directory for tar archives and metadata
         username: UWO username for authentication (optional, see credential precedence above)
         password: UWO password for authentication (optional, see credential precedence above)
+        credentials_file: Path to a credentials plain-text file (line 1: username, line 2: password) (default: ~/.uwo_credentials)
         study_description: Study description / Principal^Project search string (default: "*" for all)
         study_date: Date search string (default: "-" for all dates)
         patient_name: PatientName search string (default: "*" for all names)
@@ -269,7 +271,7 @@ def download_studies(
         ... )
     """
     # Get credentials
-    username, password = _get_credentials(username, password)
+    username, password = _get_credentials(username, password, credentials_file)
 
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)
@@ -315,6 +317,7 @@ def download_studies_from_metadata(
     metadata: str | list[dict[str, Any]] | Any,
     username: str | None = None,
     password: str | None = None,
+    credentials_file: str | None = None,
     temp_dir: str | None = None,
     dicom_server: str = "CFMM@dicom.cfmm.uwo.ca:11112",
     dcm4che_options: str = "",
@@ -329,8 +332,8 @@ def download_studies_from_metadata(
 
     Credentials are obtained in the following order of precedence:
     1. Provided username/password parameters
-    2. ~/.uwo_credentials file (line 1: username, line 2: password)
-    3. Environment variables (UWO_USERNAME, UWO_PASSWORD)
+    2. Environment variables (UWO_USERNAME, UWO_PASSWORD)
+    3. Credentials file
 
     Args:
         output_dir: Output directory for tar archives and metadata
@@ -340,6 +343,7 @@ def download_studies_from_metadata(
                  - pandas DataFrame with 'StudyInstanceUID' column
         username: UWO username for authentication (optional, see credential precedence above)
         password: UWO password for authentication (optional, see credential precedence above)
+        credentials_file: Path to a credentials plain-text file (line 1: username, line 2: password) (default: ~/.uwo_credentials)
         temp_dir: Temporary directory for intermediate DICOM files (default: system temp)
         dicom_server: DICOM server connection string (default: "CFMM@dicom.cfmm.uwo.ca:11112")
         dcm4che_options: Additional options to pass to dcm4che tools (default: "")
@@ -391,7 +395,7 @@ def download_studies_from_metadata(
         ... )
     """
     # Get credentials
-    username, password = _get_credentials(username, password)
+    username, password = _get_credentials(username, password, credentials_file)
 
     # Extract UIDs based on metadata type
     uids = []
