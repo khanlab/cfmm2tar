@@ -161,6 +161,29 @@ This workflow is especially useful when:
 - You're sharing the metadata with collaborators to decide what to download
 - You need to filter studies based on multiple criteria
 
+### Skip Derived Images
+
+You can use the `--skip-derived` flag to exclude DICOM files with ImageType containing "DERIVED". This is useful to filter out:
+- Reformatted images (MPR, MIP, etc.)
+- Screen captures
+- Derived/calculated images
+- Post-processed images
+
+Only ORIGINAL/PRIMARY images will be included in the tar file when using this option.
+
+```bash
+# Download studies, skipping derived images
+cfmm2tar --skip-derived -p 'Khan^NeuroAnalytics' -d '20240101' output_dir
+
+# Can be combined with other options
+cfmm2tar --skip-derived --from-metadata study_metadata.tsv output_dir
+```
+
+This is particularly useful when:
+- You only need the original acquired images for analysis
+- Storage is limited and you want to exclude redundant reformats
+- Your pipeline doesn't require derived images
+
 ## Python API
 
 In addition to the command-line interface, `cfmm2tar` provides a Python API for programmatic access. This is useful for integration into Python scripts, Jupyter notebooks, or workflow management tools like Snakemake.
@@ -428,6 +451,7 @@ Download DICOM studies and create tar archives.
 - `dcm4che_options` (str): Additional dcm4che options (default: "")
 - `force_refresh_trust_store` (bool): Force refresh trust store (default: False)
 - `keep_sorted_dicom` (bool): Keep sorted DICOM files (default: False)
+- `skip_derived` (bool): Skip DICOM files with ImageType containing DERIVED (default: False)
 
 **Returns:**
 - Path to output directory
@@ -447,6 +471,7 @@ Download studies using UIDs from metadata source.
 - `dcm4che_options` (str): Additional dcm4che options (default: "")
 - `force_refresh_trust_store` (bool): Force refresh trust store (default: False)
 - `keep_sorted_dicom` (bool): Keep sorted DICOM files (default: False)
+- `skip_derived` (bool): Skip DICOM files with ImageType containing DERIVED (default: False)
 
 **Returns:**
 - Path to output directory
