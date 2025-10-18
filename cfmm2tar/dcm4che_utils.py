@@ -341,7 +341,7 @@ class Dcm4cheUtils:
         # Execute findscu with XML output to file - get one root per study
         return_tags = [
             "StudyInstanceUID",
-            "PatientName",
+            "00100010",  # PatientName - using hex tag instead of keyword
             "StudyDate",
             "StudyDescription",
             "PatientID",
@@ -357,22 +357,11 @@ class Dcm4cheUtils:
                 # Extract values from this study's XML
                 for attr in root.findall(".//DicomAttribute"):
                     tag = attr.get("tag")
-                    vr = attr.get("vr")
-                    
-                    # For PersonName (PN) VR, dcm4che uses PersonName element instead of Value
-                    if vr == "PN":
-                        pn_elem = attr.find("PersonName")
-                        if pn_elem is not None and pn_elem.text:
-                            value = pn_elem.text.strip()
-                        else:
-                            # Fallback to Value element if PersonName not found
-                            value_elem = attr.find("Value")
-                            value = value_elem.text.strip() if value_elem is not None and value_elem.text else None
-                    else:
-                        value_elem = attr.find("Value")
-                        value = value_elem.text.strip() if value_elem is not None and value_elem.text else None
+                    value_elem = attr.find("Value")
 
-                    if value:
+                    if value_elem is not None and value_elem.text:
+                        value = value_elem.text.strip()
+
                         # Map DICOM tags to field names
                         if tag == "0020000D":  # StudyInstanceUID
                             study["StudyInstanceUID"] = value

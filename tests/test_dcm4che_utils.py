@@ -258,56 +258,6 @@ class TestDcm4cheUtilsUnit:
             assert study["StudyDate"] == "20240101"
             assert study["StudyDescription"] == "Khan^TestProject"
 
-    def test_xml_parsing_patient_name_with_person_name_element(self):
-        """Test parsing PatientName from XML output using PersonName element.
-        
-        dcm4che outputs PersonName (PN) DICOM attributes using <PersonName> 
-        elements instead of <Value> elements.
-        """
-        import xml.etree.ElementTree as ET
-        from unittest.mock import patch
-
-        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
-            connect="TEST@localhost:11112",
-            username="testuser",
-            password="testpass",
-        )
-
-        # Mock XML response with PersonName element (as dcm4che outputs it)
-        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
-<NativeDicomModel xml:space="preserve">
-  <DicomAttribute tag="00100010" vr="PN">
-    <PersonName number="1">AS134F1</PersonName>
-  </DicomAttribute>
-  <DicomAttribute tag="00100020" vr="LO">
-    <Value number="1">Prado^AD-BV-LEQ_AS134F1</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00080020" vr="DA">
-    <Value number="1">20240101</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00081030" vr="LO">
-    <Value number="1">Prado^TestProject</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="0020000D" vr="UI">
-    <Value number="1">1.2.3.4.5.6.7.8.9</Value>
-  </DicomAttribute>
-</NativeDicomModel>
-"""
-        mock_root = ET.fromstring(mock_xml)
-
-        with patch.object(
-            dcm4che_utils, "_execute_findscu_with_xml_output_per_study", return_value=[mock_root]
-        ):
-            result = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
-            assert len(result) == 1
-            study = result[0]
-            assert study["StudyInstanceUID"] == "1.2.3.4.5.6.7.8.9"
-            # This is the key assertion - PatientName should be populated from PersonName element
-            assert study["PatientName"] == "AS134F1"
-            assert study["PatientID"] == "Prado^AD-BV-LEQ_AS134F1"
-            assert study["StudyDate"] == "20240101"
-            assert study["StudyDescription"] == "Prado^TestProject"
-
     def test_xml_parsing_number_of_instances(self):
         """Test parsing NumberOfStudyRelatedInstances from XML output."""
         import xml.etree.ElementTree as ET
