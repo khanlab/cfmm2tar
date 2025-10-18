@@ -112,6 +112,12 @@ Examples:
         action="store_true",
         help="Force refresh the cached JKS trust store used for TLS connections",
     )
+    parser.add_argument(
+        "--skip-derived",
+        dest="skip_derived",
+        action="store_true",
+        help="Skip DICOM files with ImageType containing DERIVED (e.g., reformats, derived images)",
+    )
 
     # Search options
     parser.add_argument(
@@ -292,6 +298,7 @@ Examples:
                     downloaded_uids_filename="",
                     metadata_tsv_filename=metadata_tsv_filename,
                     force_refresh_trust_store=args.refresh_trust_store,
+                    skip_derived=args.skip_derived,
                 )
         else:
             # Normal mode - use search criteria
@@ -310,6 +317,7 @@ Examples:
                 downloaded_uids_filename="",
                 metadata_tsv_filename=metadata_tsv_filename,
                 force_refresh_trust_store=args.refresh_trust_store,
+                skip_derived=args.skip_derived,
             )
 
         # Clean up temp directory if empty

@@ -60,6 +60,7 @@ class DicomSorter:
         extract_to_dir="",
         dicomunwrap_path="dicomunwrap",
         simens_cmrr_mb_unwrap_path="extract_cmrr_physio.py",
+        skip_derived=False,
     ):
         """
         init DicomSorter
@@ -69,6 +70,7 @@ class DicomSorter:
         self.dicom_dir = dicom_dir
         self.sort_rule_function = sort_rule_function
         self.output_dir = output_dir
+        self.skip_derived = skip_derived
 
         # extract_to_dir, default is platform's tmp dir
         if not extract_to_dir:
@@ -101,6 +103,31 @@ class DicomSorter:
         generate unique string
         """
         return str(uuid.uuid4())
+
+    def _is_derived_image(self, filename):
+        """
+        Check if the DICOM file is a derived image based on ImageType tag.
+
+        input:
+            filename: full path of dicom file
+
+        output:
+            True: if the file is a derived image (ImageType contains 'DERIVED')
+            False: if the file is not derived or ImageType tag is missing
+        """
+        try:
+            dataset = pydicom.dcmread(filename, stop_before_pixels=True)
+            if "ImageType" in dataset:
+                image_type = dataset.ImageType
+                # ImageType can be a list or MultiValue
+                if isinstance(image_type, (list, tuple)):
+                    return "DERIVED" in image_type
+                else:
+                    return "DERIVED" in str(image_type)
+            return False
+        except Exception as e:
+            self.logger.debug(f"Could not read ImageType from {filename}: {e}")
+            return False
 
     def _check_non_imaging_and_unwrap(self, filename):
         """
@@ -354,6 +381,11 @@ class DicomSorter:
                     full_filename = os.path.join(root, filename)
                     if not full_filename.endswith(self._compressed_exts):
                         try:
+                            # Skip derived images if skip_derived flag is set
+                            if self.skip_derived and self._is_derived_image(full_filename):
+                                self.logger.debug(f"Skipping derived image: {full_filename}")
+                                continue
+
                             sorted_relative_path_filename = sort_rule_function(full_filename)
                             # apply sort_rule_function on non-dicom or bad dicom return None
                             if sorted_relative_path_filename is not None:
