@@ -209,6 +209,7 @@ def download_studies(
     dcm4che_options: str = "",
     force_refresh_trust_store: bool = False,
     keep_sorted_dicom: bool = False,
+    skip_derived: bool = False,
 ) -> str:
     """
     Download DICOM studies from the server and create tar archives.
@@ -237,6 +238,7 @@ def download_studies(
         dcm4che_options: Additional options to pass to dcm4che tools (default: "")
         force_refresh_trust_store: Force refresh the cached JKS trust store (default: False)
         keep_sorted_dicom: Keep the sorted DICOM files after creating tar (default: False)
+        skip_derived: Skip DICOM files with ImageType containing DERIVED (default: False)
 
     Returns:
         Path to the output directory containing the downloaded tar files
@@ -300,6 +302,7 @@ def download_studies(
         downloaded_uids_filename="",
         metadata_tsv_filename=metadata_tsv_filename,
         force_refresh_trust_store=force_refresh_trust_store,
+        skip_derived=skip_derived,
     )
 
     # Clean up temp directory if empty
@@ -323,6 +326,7 @@ def download_studies_from_metadata(
     dcm4che_options: str = "",
     force_refresh_trust_store: bool = False,
     keep_sorted_dicom: bool = False,
+    skip_derived: bool = False,
 ) -> str:
     """
     Download DICOM studies using UIDs from metadata.
@@ -349,6 +353,7 @@ def download_studies_from_metadata(
         dcm4che_options: Additional options to pass to dcm4che tools (default: "")
         force_refresh_trust_store: Force refresh the cached JKS trust store (default: False)
         keep_sorted_dicom: Keep the sorted DICOM files after creating tar (default: False)
+        skip_derived: Skip DICOM files with ImageType containing DERIVED (default: False)
 
     Returns:
         Path to the output directory containing the downloaded tar files
@@ -482,6 +487,7 @@ def download_studies_from_metadata(
             downloaded_uids_filename="",
             metadata_tsv_filename=metadata_tsv_filename,
             force_refresh_trust_store=force_refresh_trust_store,
+            skip_derived=skip_derived,
         )
 
     # Clean up temp directory if empty

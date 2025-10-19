@@ -78,6 +78,7 @@ def main(
     downloaded_uids_filename,
     metadata_tsv_filename="",
     force_refresh_trust_store=False,
+    skip_derived=False,
 ):
     """
     main workflow: for each study: query,retrieve,tar
@@ -175,7 +176,7 @@ def main(
             os.makedirs(tar_dest_dir)
 
         with dicom_sorter.DicomSorter(
-            retrieved_dicom_dir, sort_rules.sort_rule_CFMM, tar_dest_dir
+            retrieved_dicom_dir, sort_rules.sort_rule_CFMM, tar_dest_dir, skip_derived=skip_derived
         ) as d:
             # according to CFMM's rule, folder depth is 5:
             # pi/project/study_date/patient/studyID_and_hash_studyInstanceUID
