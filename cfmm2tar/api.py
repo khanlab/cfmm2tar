@@ -203,7 +203,7 @@ def download_studies(
     study_description: str = "*",
     study_date: str = "-",
     patient_name: str = "*",
-    study_instance_uid: str = "*",
+    study_instance_uid: str | list[str] = "*",
     temp_dir: str | None = None,
     dicom_server: str = "CFMM@dicom.cfmm.uwo.ca:11112",
     dcm4che_options: str = "",
@@ -231,7 +231,8 @@ def download_studies(
         study_description: Study description / Principal^Project search string (default: "*" for all)
         study_date: Date search string (default: "-" for all dates)
         patient_name: PatientName search string (default: "*" for all names)
-        study_instance_uid: Specific StudyInstanceUID to download (default: "*")
+        study_instance_uid: Specific StudyInstanceUID(s) to download (default: "*")
+                           Can be a single UID string or a list of UIDs
                            If specified, this overrides other search criteria
         temp_dir: Temporary directory for intermediate DICOM files (default: system temp)
         dicom_server: DICOM server connection string (default: "CFMM@dicom.cfmm.uwo.ca:11112")
@@ -271,6 +272,13 @@ def download_studies(
         ...     output_dir="/path/to/output",
         ...     study_instance_uid="1.2.840.113619.2.55.3.1234567890.123"
         ... )
+
+        Download multiple studies by UID:
+        >>> download_studies(
+        ...     output_dir="/path/to/output",
+        ...     study_instance_uid=["1.2.840.113619.2.55.3.1234567890.123",
+        ...                          "1.2.840.113619.2.55.3.9876543210.456"]
+        ... )
     """
     # Get credentials
     username, password = _get_credentials(username, password, credentials_file)
@@ -286,24 +294,47 @@ def download_studies(
     # Metadata file path
     metadata_tsv_filename = os.path.join(output_dir, "study_metadata.tsv")
 
-    # Call the main retrieve function
-    retrieve_cfmm_tar.main(
-        uwo_username=username,
-        uwo_password=password,
-        connect=dicom_server,
-        PI_matching_key=study_description,
-        retrieve_dest_dir=temp_dir,
-        keep_sorted_dest_dir_flag=keep_sorted_dicom,
-        tar_dest_dir=output_dir,
-        study_date=study_date,
-        patient_name=patient_name,
-        study_instance_uid=study_instance_uid,
-        other_options=dcm4che_options,
-        downloaded_uids_filename="",
-        metadata_tsv_filename=metadata_tsv_filename,
-        force_refresh_trust_store=force_refresh_trust_store,
-        skip_derived=skip_derived,
-    )
+    # Handle study_instance_uid - can be string or list
+    if isinstance(study_instance_uid, list):
+        # Multiple UIDs provided - download each one
+        for i, uid in enumerate(study_instance_uid):
+            print(f"\nDownloading study {i + 1}/{len(study_instance_uid)}: {uid}")
+            retrieve_cfmm_tar.main(
+                uwo_username=username,
+                uwo_password=password,
+                connect=dicom_server,
+                PI_matching_key=study_description,
+                retrieve_dest_dir=temp_dir,
+                keep_sorted_dest_dir_flag=keep_sorted_dicom,
+                tar_dest_dir=output_dir,
+                study_date=study_date,
+                patient_name=patient_name,
+                study_instance_uid=uid,
+                other_options=dcm4che_options,
+                downloaded_uids_filename="",
+                metadata_tsv_filename=metadata_tsv_filename,
+                force_refresh_trust_store=force_refresh_trust_store,
+                skip_derived=skip_derived,
+            )
+    else:
+        # Single UID or wildcard
+        retrieve_cfmm_tar.main(
+            uwo_username=username,
+            uwo_password=password,
+            connect=dicom_server,
+            PI_matching_key=study_description,
+            retrieve_dest_dir=temp_dir,
+            keep_sorted_dest_dir_flag=keep_sorted_dicom,
+            tar_dest_dir=output_dir,
+            study_date=study_date,
+            patient_name=patient_name,
+            study_instance_uid=study_instance_uid,
+            other_options=dcm4che_options,
+            downloaded_uids_filename="",
+            metadata_tsv_filename=metadata_tsv_filename,
+            force_refresh_trust_store=force_refresh_trust_store,
+            skip_derived=skip_derived,
+        )
 
     # Clean up temp directory if empty
     try:

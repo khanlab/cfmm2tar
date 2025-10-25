@@ -56,6 +56,9 @@ Examples:
   %(prog)s -u '12345.123456.123.1234567' output_dir
       Specific StudyInstanceUID
 
+  %(prog)s -u '12345.123456.123.1234567' -u '98765.987654.987.9876543' output_dir
+      Multiple StudyInstanceUIDs
+
   %(prog)s -m -p 'Khan^NeuroAnalytics' -d '20170530' output_dir
       Query and write study metadata to TSV file (no download)
 
@@ -145,8 +148,9 @@ Examples:
         "-u",
         "--uid",
         dest="study_instance_uid",
-        default="*",
-        help="StudyInstanceUID (Note: this will override other search options)",
+        action="append",
+        default=None,
+        help="StudyInstanceUID (can be specified multiple times; Note: this will override other search options)",
     )
 
     # Required positional argument
@@ -222,7 +226,7 @@ Examples:
         sys.exit(0)
 
     # Handle from-metadata mode (download specific UIDs from file)
-    study_instance_uid = args.study_instance_uid
+    study_instance_uids = args.study_instance_uid  # This is now a list or None
     if args.from_metadata:
         # Read UIDs from file
         uids = []
@@ -252,6 +256,10 @@ Examples:
             sys.exit(1)
 
         print(f"Will download {len(uids)} studies from {args.from_metadata}")
+        study_instance_uids = uids
+    elif study_instance_uids:
+        # UIDs provided via -u flag
+        print(f"Will download {len(study_instance_uids)} studies by UID")
 
     # Read or prompt for credentials
     username, password = read_credentials(args.credentials_file)
@@ -279,10 +287,10 @@ Examples:
     keep_sorted_dicom = False
 
     try:
-        if args.from_metadata:
-            # Download each UID from the file
-            for i, uid in enumerate(uids):
-                print(f"\nDownloading study {i + 1}/{len(uids)}: {uid}")
+        if study_instance_uids:
+            # Download each UID (from -u flag or --from-metadata)
+            for i, uid in enumerate(study_instance_uids):
+                print(f"\nDownloading study {i + 1}/{len(study_instance_uids)}: {uid}")
                 retrieve_cfmm_tar.main(
                     uwo_username=username,
                     uwo_password=password,
@@ -301,7 +309,7 @@ Examples:
                     skip_derived=args.skip_derived,
                 )
         else:
-            # Normal mode - use search criteria
+            # Normal mode - use search criteria (no specific UIDs provided)
             retrieve_cfmm_tar.main(
                 uwo_username=username,
                 uwo_password=password,
@@ -312,7 +320,7 @@ Examples:
                 tar_dest_dir=output_dir,
                 study_date=args.date_search,
                 patient_name=args.name_search,
-                study_instance_uid=study_instance_uid,
+                study_instance_uid="*",
                 other_options=args.dcm4che_options,
                 downloaded_uids_filename="",
                 metadata_tsv_filename=metadata_tsv_filename,

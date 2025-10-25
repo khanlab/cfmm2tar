@@ -314,6 +314,101 @@ class TestDownloadStudies:
             assert call_kwargs["retrieve_dest_dir"] == temp_dir
             assert os.path.exists(temp_dir)
 
+    @patch("cfmm2tar.api._get_credentials")
+    @patch("cfmm2tar.api.retrieve_cfmm_tar.main")
+    def test_download_studies_with_multiple_uids(
+        self, mock_retrieve, mock_get_creds, mock_credentials
+    ):
+        """Test download_studies with multiple StudyInstanceUIDs."""
+        mock_get_creds.return_value = (
+            mock_credentials["username"],
+            mock_credentials["password"],
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = os.path.join(tmpdir, "output")
+            test_uids = [
+                "1.2.840.113619.2.55.3.1234567890.123",
+                "1.2.840.113619.2.55.3.9876543210.456",
+                "1.2.840.113619.2.55.3.1111111111.789",
+            ]
+
+            # Call function with list of UIDs
+            api.download_studies(
+                output_dir=output_dir,
+                username=mock_credentials["username"],
+                password=mock_credentials["password"],
+                study_instance_uid=test_uids,
+            )
+
+            # Should be called once for each UID
+            assert mock_retrieve.call_count == 3
+
+            # Check that each UID was passed correctly
+            calls = mock_retrieve.call_args_list
+            assert calls[0][1]["study_instance_uid"] == test_uids[0]
+            assert calls[1][1]["study_instance_uid"] == test_uids[1]
+            assert calls[2][1]["study_instance_uid"] == test_uids[2]
+
+    @patch("cfmm2tar.api._get_credentials")
+    @patch("cfmm2tar.api.retrieve_cfmm_tar.main")
+    def test_download_studies_with_two_uids(
+        self, mock_retrieve, mock_get_creds, mock_credentials
+    ):
+        """Test download_studies with exactly two StudyInstanceUIDs."""
+        mock_get_creds.return_value = (
+            mock_credentials["username"],
+            mock_credentials["password"],
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = os.path.join(tmpdir, "output")
+            test_uids = [
+                "1.2.840.113619.2.55.3.1234567890.123",
+                "1.2.840.113619.2.55.3.9876543210.456",
+            ]
+
+            # Call function with list of UIDs
+            result = api.download_studies(
+                output_dir=output_dir,
+                username=mock_credentials["username"],
+                password=mock_credentials["password"],
+                study_instance_uid=test_uids,
+            )
+
+            # Should return output_dir
+            assert result == output_dir
+
+            # Should be called once for each UID
+            assert mock_retrieve.call_count == 2
+
+            # Check that UIDs were passed correctly
+            calls = mock_retrieve.call_args_list
+            assert calls[0][1]["study_instance_uid"] == test_uids[0]
+            assert calls[1][1]["study_instance_uid"] == test_uids[1]
+
+    @patch("cfmm2tar.api._get_credentials")
+    @patch("cfmm2tar.api.retrieve_cfmm_tar.main")
+    def test_download_studies_empty_uid_list(
+        self, mock_retrieve, mock_get_creds, mock_credentials
+    ):
+        """Test download_studies with empty list of UIDs."""
+        mock_get_creds.return_value = (
+            mock_credentials["username"],
+            mock_credentials["password"],
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = os.path.join(tmpdir, "output")
+
+            # Call function with empty list
+            api.download_studies(
+                output_dir=output_dir,
+                username=mock_credentials["username"],
+                password=mock_credentials["password"],
+                study_instance_uid=[],
+            )
+
+            # Should not be called for empty list
+            assert mock_retrieve.call_count == 0
+
 
 class TestDownloadStudiesFromMetadata:
     """Tests for download_studies_from_metadata function."""
