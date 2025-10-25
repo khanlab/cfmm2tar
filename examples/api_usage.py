@@ -188,14 +188,16 @@ def example_download_multiple_uids():
     password = getpass("UWO Password: ")
     output_dir = input("Output directory: ")
 
-    # Download multiple studies by UID
+    # NOTE: Replace these example UIDs with real StudyInstanceUIDs from your DICOM server
+    # You can get UIDs by first using Example 1 to query metadata
     study_uids = [
-        "1.2.840.113619.2.55.3.1234567890.123",
-        "1.2.840.113619.2.55.3.9876543210.456",
-        "1.2.840.113619.2.55.3.1111111111.789",
+        "1.2.840.113619.2.55.3.1234567890.123",  # Replace with real UID
+        "1.2.840.113619.2.55.3.9876543210.456",  # Replace with real UID
+        "1.2.840.113619.2.55.3.1111111111.789",  # Replace with real UID
     ]
 
-    print(f"\nDownloading {len(study_uids)} studies by UID...")
+    print("\nNOTE: This example uses placeholder UIDs. Replace them with real UIDs from your server.")
+    print(f"Downloading {len(study_uids)} studies by UID...")
     result_dir = download_studies(
         username=username,
         password=password,
