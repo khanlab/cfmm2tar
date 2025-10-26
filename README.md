@@ -184,6 +184,49 @@ This is particularly useful when:
 - Storage is limited and you want to exclude redundant reformats
 - Your pipeline doesn't require derived images
 
+## BIDS Dataset Validation
+
+After converting DICOM data to BIDS format (e.g., using [HeuDiConv](https://heudiconv.readthedocs.io/)), you can validate the BIDS dataset using the included BIDS validator tool.
+
+### Installation with BIDS Support
+
+```bash
+# Install with BIDS validation support
+pip install cfmm2tar[bids]
+```
+
+This installs [bids-validator-deno](https://pypi.org/project/bids-validator-deno/), a fast BIDS validator that runs without requiring Node.js.
+
+### Validating BIDS Datasets
+
+```bash
+# Validate a specific BIDS dataset
+cfmm2tar-validate-bids /path/to/bids/dataset
+
+# Find and validate all BIDS datasets in a directory tree
+cfmm2tar-validate-bids --search /path/to/search/directory
+
+# Use a custom validator path
+cfmm2tar-validate-bids --validator /custom/path/to/bids-validator-deno /path/to/dataset
+```
+
+### Pre-commit Hook for BIDS Validation
+
+The project includes a pre-commit hook configuration for automatic BIDS validation. After converting DICOM to BIDS, you can enable the hook to validate datasets before committing:
+
+```bash
+# Install pre-commit hooks (including BIDS validator)
+pre-commit install
+
+# Run all hooks manually
+pre-commit run --all-files
+
+# Run only the BIDS validator hook
+pre-commit run bids-validator
+```
+
+The BIDS validator hook will automatically run when you commit changes to BIDS-related files (e.g., `dataset_description.json`, `.nii.gz` files, `participants.tsv`, etc.).
+
 ## Python API
 
 In addition to the command-line interface, `cfmm2tar` provides a Python API for programmatic access. This is useful for integration into Python scripts, Jupyter notebooks, or workflow management tools like Snakemake.

@@ -31,9 +31,11 @@ Documentation = "https://github.com/khanlab/cfmm2tar/blob/master/README.md"
 
 [project.scripts]
 cfmm2tar = "cfmm2tar.cli:main"
+cfmm2tar-validate-bids = "cfmm2tar.validate_bids:main"
 
 [project.optional-dependencies]
 dataframe = ["pandas>=2.0.0"]
+bids = ["bids-validator-deno>=2.0.0"]
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

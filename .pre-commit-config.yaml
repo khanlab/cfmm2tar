@@ -20,3 +20,13 @@ repos:
         args: [--fix]
       # Run the formatter
       - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: bids-validator
+        name: BIDS Dataset Validator
+        entry: cfmm2tar-validate-bids
+        language: system
+        pass_filenames: false
+        files: ^(dataset_description\.json|participants\.(tsv|json)|.*\.nii(\.gz)?|.*_bold\.json|.*_T1w\.json|.*_T2w\.json|.*_events\.tsv|.*_sessions\.tsv|README|CHANGES|.*_scans\.tsv)$
+        types: [file]
