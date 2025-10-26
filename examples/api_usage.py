@@ -196,7 +196,9 @@ def example_download_multiple_uids():
         "1.2.840.113619.2.55.3.1111111111.789",  # Replace with real UID
     ]
 
-    print("\nNOTE: This example uses placeholder UIDs. Replace them with real UIDs from your server.")
+    print(
+        "\nNOTE: This example uses placeholder UIDs. Replace them with real UIDs from your server."
+    )
     print(f"Downloading {len(study_uids)} studies by UID...")
     result_dir = download_studies(
         username=username,

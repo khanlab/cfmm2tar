@@ -351,9 +351,7 @@ class TestDownloadStudies:
 
     @patch("cfmm2tar.api._get_credentials")
     @patch("cfmm2tar.api.retrieve_cfmm_tar.main")
-    def test_download_studies_with_two_uids(
-        self, mock_retrieve, mock_get_creds, mock_credentials
-    ):
+    def test_download_studies_with_two_uids(self, mock_retrieve, mock_get_creds, mock_credentials):
         """Test download_studies with exactly two StudyInstanceUIDs."""
         mock_get_creds.return_value = (
             mock_credentials["username"],
@@ -387,9 +385,7 @@ class TestDownloadStudies:
 
     @patch("cfmm2tar.api._get_credentials")
     @patch("cfmm2tar.api.retrieve_cfmm_tar.main")
-    def test_download_studies_empty_uid_list(
-        self, mock_retrieve, mock_get_creds, mock_credentials
-    ):
+    def test_download_studies_empty_uid_list(self, mock_retrieve, mock_get_creds, mock_credentials):
         """Test download_studies with empty list of UIDs."""
         mock_get_creds.return_value = (
             mock_credentials["username"],
