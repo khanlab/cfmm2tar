@@ -178,6 +178,39 @@ def example_download_from_file():
     print(f"\nDownload complete! Studies saved to: {output_dir}")
 
 
+def example_download_multiple_uids():
+    """Example: Download multiple studies by UID."""
+    print("\n" + "=" * 60)
+    print("Example 6: Download multiple studies by UID")
+    print("=" * 60)
+
+    username = input("UWO Username: ")
+    password = getpass("UWO Password: ")
+    output_dir = input("Output directory: ")
+
+    # NOTE: Replace these example UIDs with real StudyInstanceUIDs from your DICOM server
+    # You can get UIDs by first using Example 1 to query metadata
+    study_uids = [
+        "1.2.840.113619.2.55.3.1234567890.123",  # Replace with real UID
+        "1.2.840.113619.2.55.3.9876543210.456",  # Replace with real UID
+        "1.2.840.113619.2.55.3.1111111111.789",  # Replace with real UID
+    ]
+
+    print(
+        "\nNOTE: This example uses placeholder UIDs. Replace them with real UIDs from your server."
+    )
+    print(f"Downloading {len(study_uids)} studies by UID...")
+    result_dir = download_studies(
+        username=username,
+        password=password,
+        output_dir=output_dir,
+        study_instance_uid=study_uids,
+    )
+
+    print(f"\nStudies downloaded to: {result_dir}")
+    print(f"Metadata saved to: {os.path.join(result_dir, 'study_metadata.tsv')}")
+
+
 def main():
     """Run examples."""
     print("cfmm2tar Python API Examples")
@@ -189,10 +222,11 @@ def main():
     print("3. Download studies by search criteria")
     print("4. Query then download filtered studies (complete workflow)")
     print("5. Download from metadata file")
+    print("6. Download multiple studies by UID")
     print("0. Exit")
     print()
 
-    choice = input("Enter choice (0-5): ")
+    choice = input("Enter choice (0-6): ")
 
     if choice == "1":
         example_query_metadata()
@@ -204,6 +238,8 @@ def main():
         example_query_then_download()
     elif choice == "5":
         example_download_from_file()
+    elif choice == "6":
+        example_download_multiple_uids()
     elif choice == "0":
         print("Exiting")
     else:
