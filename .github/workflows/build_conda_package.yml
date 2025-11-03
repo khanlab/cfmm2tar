@@ -13,8 +13,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Build conda package
-        uses: prefix-dev/rattler-build-action@v0.2.34
       - name: Get latest commit SHA from main
         id: get_sha
         run: |
@@ -26,10 +24,10 @@ jobs:
           echo "Updating recipe.yaml with commit: $COMMIT_SHA"
 
           # Update the Jinja-set 'rev'
-          sed -i "s|^{% set rev = \".*\" %}|{% set rev = \"$COMMIT_SHA\" %}|" ./recipe/recipe.yaml
-      - name: Build
-        run: |
-          rattler-build build --recipe recipe/recipe.yaml -c khanlab -c conda-forge
+          sed -i "s|^{% set rev = \".*\" %}|{% set rev = \"$COMMIT_SHA\" %}|" ./conda.recipe/recipe.yaml
+      - name: Build conda package
+        uses: prefix-dev/rattler-build-action@v0.2.34
+        build-args: -c khanlab -c conda-forge
       - name: Upload package to Khanlab channel
         shell: bash
         env:
