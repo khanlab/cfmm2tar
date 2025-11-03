@@ -8,34 +8,6 @@ Download a tarballed DICOM dataset from the CFMM DICOM server
 
 ## Installation & Usage
 
-### Installation with conda
-
-#### 1. Install miniconda (if not already installed)
-
-Follow the instructions at the official Conda documentation:
-[https://www.anaconda.com/docs/getting-started/miniconda/install](https://www.anaconda.com/docs/getting-started/miniconda/install)
-
----
-
-#### 2. Create and activate a new Conda environment
-
-```bash
-conda create --name cfmm2tar-env -c khanlab -c conda-forge cfmm2tar
-conda activate cfmm2tar-env
-```
-
----
-
-#### 3. Test the installation
-
-Run the following command to verify the installation:
-
-```bash
-cfmm2tar --help
-```
-
-You should see a help message listing all available command-line options.
-
 ### Installation with Pixi
 
 `cfmm2tar` uses [pixi](https://pixi.sh) for dependency management, which automatically handles all dependencies including Python, dcm4che tools, and required libraries.
@@ -55,6 +27,7 @@ You should see a help message listing all available command-line options.
    ```powershell
    iwr -useb https://pixi.sh/install.ps1 | iex
    ```
+#### Option A:
 
 2. **Clone the repository:**
    ```bash
@@ -74,6 +47,12 @@ You should see a help message listing all available command-line options.
    
    # Option 2: Use pixi shell-hook for automatic activation
    eval "$(pixi shell-hook)"
+   ```
+
+#### Option B:
+2. **Install cfmm2tar globally:**
+   ```bash
+   pixi global install cfmm2tar -c khanlab -c conda-forge
    ```
 
 **Usage:**
