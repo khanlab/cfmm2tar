@@ -1,0 +1,48 @@
+---
+# .github/workflows/build-conda.yml
+name: Build and Upload Conda Package
+on:
+  push:
+    branches: [main]
+  # pull_request:
+  #   types: [opened, synchronize, reopened]
+  workflow_dispatch:
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build conda package
+        uses: prefix-dev/rattler-build-action@v0.2.34
+      - name: Get latest commit SHA from main
+        id: get_sha
+        run: |
+          echo "Fetching latest commit on main branch..."
+          COMMIT_SHA=$(git ls-remote origin refs/heads/main | cut -f1)
+          echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
+      - name: Update recipe.yaml with latest rev
+        run: |
+          echo "Updating recipe.yaml with commit: $COMMIT_SHA"
+
+          # Update the Jinja-set 'rev'
+          sed -i "s|^{% set rev = \".*\" %}|{% set rev = \"$COMMIT_SHA\" %}|" ./recipe/recipe.yaml
+      - name: Build
+        run: |
+          rattler-build build --recipe recipe/recipe.yaml -c khanlab -c conda-forge
+      - name: Upload package to Khanlab channel
+        shell: bash
+        env:
+          BINSTAR_TOKEN: ${{ secrets.ANACONDA_UPLOAD_TOKEN }}
+        run: |
+          shopt -s nullglob
+
+          export ANACONDA_API_KEY=$BINSTAR_TOKEN
+
+          EXIT_CODE=0
+          for pkg in $(find output -type f \( -name "*.conda" -o -name "*.tar.bz2" \) ); do
+            if ! rattler-build upload anaconda --owner khanlab "${pkg}"; then
+              EXIT_CODE=1
+            fi
+          done
+          exit $EXIT_CODE
