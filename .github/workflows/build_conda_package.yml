@@ -23,8 +23,8 @@ jobs:
         run: |
           echo "Updating recipe.yaml with commit: $COMMIT_SHA"
 
-          # Update the Jinja-set 'rev'
-          sed -i "s|^{% set rev = \".*\" %}|{% set rev = \"$COMMIT_SHA\" %}|" ./conda.recipe/recipe.yaml
+          # Replace the literal 'rev:' line under source:
+          sed -i "s|^\(\s*rev:\s*\).*|\1$COMMIT_SHA|" ./conda.recipe/recipe.yaml
       - name: Build conda package
         uses: prefix-dev/rattler-build-action@v0.2.34
         with:
