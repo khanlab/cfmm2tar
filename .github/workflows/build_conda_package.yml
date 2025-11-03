@@ -13,11 +13,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Get latest commit SHA from main
+      - name: Get latest commit SHA from master
         id: get_sha
         run: |
-          echo "Fetching latest commit on main branch..."
-          COMMIT_SHA=$(git ls-remote origin refs/heads/main | cut -f1)
+          echo "Fetching latest commit on master branch..."
+          COMMIT_SHA=$(git ls-remote origin refs/heads/master | cut -f1)
           echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
       - name: Update recipe.yaml with latest rev
         run: |
