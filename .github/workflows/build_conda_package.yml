@@ -27,7 +27,8 @@ jobs:
           sed -i "s|^{% set rev = \".*\" %}|{% set rev = \"$COMMIT_SHA\" %}|" ./conda.recipe/recipe.yaml
       - name: Build conda package
         uses: prefix-dev/rattler-build-action@v0.2.34
-        build-args: -c khanlab -c conda-forge
+        with:
+          build-args: -c khanlab -c conda-forge
       - name: Upload package to Khanlab channel
         shell: bash
         env:
@@ -39,7 +40,7 @@ jobs:
 
           EXIT_CODE=0
           for pkg in $(find output -type f \( -name "*.conda" -o -name "*.tar.bz2" \) ); do
-            if ! rattler-build upload anaconda --owner khanlab "${pkg}"; then
+            if ! rattler-build upload anaconda --owner khanlab "${pkg}" --force; then
               EXIT_CODE=1
             fi
           done
