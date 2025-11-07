@@ -1,0 +1,45 @@
+context:
+  version: 2.0.2
+
+package:
+  name: cfmm2tar
+  version: ${{ version }}
+
+source:
+  git: https://github.com/khanlab/cfmm2tar.git
+  rev: f03512b1b97f5a920d4e49eaa85e7d7b7750839a
+
+build:
+  script: ${{ PYTHON }} -m pip install .
+  python:
+    entry_points:
+    - cfmm2tar = cfmm2tar.cli:main
+  noarch: python
+
+requirements:
+  host:
+  - python >=3.11
+  - hatchling
+  - hatch-vcs
+  - pip
+  run:
+  - python >=3.11
+  - pydicom >=3.0.1,<4
+  - packaging 
+  - platformdirs 
+  - click
+  - dcm4che-tools >=5.33.1,<6
+
+tests:
+- python:
+    imports:
+    - cfmm2tar
+    pip_check: true
+- script:
+    - cfmm2tar --help
+
+about:
+  summary: Download and query DICOM datasets from the CFMM DICOM server
+  description: Download and query DICOM datasets from the CFMM DICOM server
+  license: MIT
+  documentation: https://github.com/khanlab/cfmm2tar/blob/master/README.md
