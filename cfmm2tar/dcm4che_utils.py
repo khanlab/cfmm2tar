@@ -464,11 +464,10 @@ class Dcm4cheUtils:
 
     def _retrieve_by_key_useless(self, matching_key, output_dir, downloaded_uids_filename=""):
         """
-        retrieve dicom file by key. If PACS not ready for retrieving(e.g. console still sending data to PACS), it will keep checking until time out (30 mins)
+        Retrieve DICOM files by matching key.
 
         input:
-            key_name: specify matching key, for instance StudyInstanceUID
-            key_value: matching key's value, for instance, 1.2.3.4.5.6.....
+            matching_key: matching key dictionary, for instance {"StudyInstanceUID": "1.2.3.4.5.6....."}
             output_dir: save retrieved dicom files to
             downloaded_uids_filename: file record downloaded StudyInstanceUIDs
 
@@ -480,7 +479,7 @@ class Dcm4cheUtils:
             Dicom files retrieved to output_dir
         """
 
-        self.logger.info("checking if PACS ready for retrieving...")
+        self.logger.info("retrieving...")
 
         # output_dir=os.path.join(output_dir,clean_path(key_value))
         if not os.path.exists(output_dir):
