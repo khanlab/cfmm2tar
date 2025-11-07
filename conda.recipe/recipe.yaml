@@ -39,7 +39,7 @@ tests:
     - cfmm2tar --help
 
 about:
-  summary: Download a tarballed DICOM dataset from the CFMM DICOM server
-  description: Download a tarballed DICOM dataset from the CFMM DICOM server
+  summary: Download and query DICOM datasets from the CFMM DICOM server
+  description: Download and query DICOM datasets from the CFMM DICOM server
   license: MIT
   documentation: https://github.com/khanlab/cfmm2tar/blob/master/README.md
