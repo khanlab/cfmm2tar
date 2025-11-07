@@ -132,7 +132,7 @@ def main(
         # retrieve
         # retrieved_dicom_dir: example '/retrieve_dest_dir/1.3.12.2.1107.xx'
         retrieved_dicom_dir = cfmm_dcm4che_utils.retrieve_by_StudyInstanceUID(
-            StudyInstanceUID, retrieve_dest_dir, timeout_sec=1800
+            StudyInstanceUID, retrieve_dest_dir
         )
 
         logger.info(f"retrieved dicoms to {retrieved_dicom_dir}")
