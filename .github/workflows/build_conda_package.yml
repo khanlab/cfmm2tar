@@ -18,11 +18,21 @@ jobs:
           echo "Fetching latest tag..."
           LATEST_TAG=$(git ls-remote --tags origin | cut -f2 | sed 's#refs/tags/##' | tr -d 'vV' | sort -V | tail -n1)
           echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+      - name: Get the branch name for version
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master'
+        run: |
+          echo "Branch name: ${{ github.ref_name }}..."
+          echo "LATEST_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
       - name: Get latest commit SHA from master
-        id: get_sha
         run: |
           echo "Fetching latest commit on master branch..."
           COMMIT_SHA=$(git ls-remote origin refs/heads/master | cut -f1)
+          echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
+      - name: Get latest commit SHA from branch
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master'
+        run: |
+          echo "Fetching latest commit on branch: ${{ github.ref_name }}..."
+          COMMIT_SHA=$(git ls-remote origin ${{ github.ref }} | cut -f1)
           echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
       - name: Update recipe.yaml with latest rev and version
         run: |
