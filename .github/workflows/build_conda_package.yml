@@ -16,7 +16,7 @@ jobs:
       - name: Get latest version from master
         run: |
           echo "Fetching latest tag..."
-          LATEST_TAG=$(git tag -l --sort=-creatordate | head -n 1 | tr -d 'v')
+          LATEST_TAG=$(git ls-remote --tags origin | cut -f2 | sed 's#refs/tags/##' | tr -d 'vV' | sort -V | tail -n1)
           echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
       - name: Get latest commit SHA from master
         id: get_sha
