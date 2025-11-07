@@ -3,9 +3,9 @@
 name: Build and Upload Conda Package
 on:
   push:
-    branches: [main]
-  # pull_request:
-  #   types: [opened, synchronize, reopened]
+    branches: [master]
+  pull_request:
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 jobs:
   build-and-upload:
@@ -13,18 +13,26 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Get latest version from master
+        run: |
+          echo "Fetching latest tag..."
+          LATEST_TAG=$(git describe --tags --abbrev=0 | tr -d 'v')
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
       - name: Get latest commit SHA from master
         id: get_sha
         run: |
           echo "Fetching latest commit on master branch..."
           COMMIT_SHA=$(git ls-remote origin refs/heads/master | cut -f1)
           echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
-      - name: Update recipe.yaml with latest rev
+      - name: Update recipe.yaml with latest rev and version
         run: |
-          echo "Updating recipe.yaml with commit: $COMMIT_SHA"
+          echo "Updating recipe.yaml with commit: $COMMIT_SHA and tag: $LATEST_TAG"
 
           # Replace the literal 'rev:' line under source:
           sed -i "s|^\(\s*rev:\s*\).*|\1$COMMIT_SHA|" ./conda.recipe/recipe.yaml
+
+          # Replace the literal 'version:' line under context:
+          sed -i "s|^\(\s*version:\s*\).*|\1$LATEST_TAG|" ./conda.recipe/recipe.yaml
       - name: Build conda package
         uses: prefix-dev/rattler-build-action@v0.2.34
         with:
