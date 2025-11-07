@@ -27,6 +27,7 @@ Download a tarballed DICOM dataset from the CFMM DICOM server
    ```powershell
    iwr -useb https://pixi.sh/install.ps1 | iex
    ```
+#### Option A:
 
 2. **Clone the repository:**
    ```bash
@@ -46,6 +47,12 @@ Download a tarballed DICOM dataset from the CFMM DICOM server
 
    # Option 2: Use pixi shell-hook for automatic activation
    eval "$(pixi shell-hook)"
+   ```
+
+#### Option B:
+2. **Install cfmm2tar globally:**
+   ```bash
+   pixi global install cfmm2tar -c khanlab
    ```
 
 **Usage:**
