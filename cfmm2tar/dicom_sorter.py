@@ -298,7 +298,7 @@ class DicomSorter:
         )
 
         if not before_after_sort_rule_list:
-            raise (ValueError("No dicom files found!"))
+            raise ValueError("No dicom files found!")
 
         ######
         # tar

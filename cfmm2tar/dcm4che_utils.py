@@ -420,7 +420,7 @@ class Dcm4cheUtils:
 
     def retrieve_by_StudyInstanceUID(self, StudyInstanceUID, output_dir):
         """
-        retrive dicom file by key StudyInstanceUID. If PACS not ready for retrieving(e.g. console still sending data to PACS), it will keep checking until time out (30 mins)
+        retrieve dicom file by key StudyInstanceUID. If PACS not ready for retrieving(e.g. console still sending data to PACS), it will keep checking until time out (30 mins)
 
         input:
             StudyInstanceUID: StudyInstanceUID key value
