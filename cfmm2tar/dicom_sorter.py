@@ -298,8 +298,7 @@ class DicomSorter:
         )
 
         if not before_after_sort_rule_list:
-            self.logger.info("dicom files no found!")
-            return None
+            raise ValueError("No dicom files found!")
 
         ######
         # tar

@@ -418,14 +418,13 @@ class Dcm4cheUtils:
         pi_names = [name.encode("UTF-8") for name in sorted(pi_names_set)]
         return pi_names
 
-    def retrieve_by_StudyInstanceUID(self, StudyInstanceUID, output_dir, timeout_sec=1800):
+    def retrieve_by_StudyInstanceUID(self, StudyInstanceUID, output_dir):
         """
-        retrive dicom file by key StudyInstanceUID. If PACS not ready for retrieving(e.g. console still sending data to PACS), it will keep checking until time out (30 mins)
+        retrieve dicom file by key StudyInstanceUID. If PACS not ready for retrieving(e.g. console still sending data to PACS), it will keep checking until time out (30 mins)
 
         input:
             StudyInstanceUID: StudyInstanceUID key value
             output_dir: save retrieved dicom files to
-            timeout_sec: keep checking if ready_for_retrieve before timeout
 
         output: output_sub_dir
             output_sub_dir:os.path.join(output_dir,StudyInstanceUID)
@@ -435,20 +434,6 @@ class Dcm4cheUtils:
         """
 
         self.logger.info("checking if PACS ready for retrieving...")
-
-        # check PACS server data completeness
-        start_time = time.time()
-        time_elapsed = 0
-        while time_elapsed < timeout_sec:
-            if self._ready_for_retrieve(f"-m StudyInstanceUID='{StudyInstanceUID}'"):
-                break
-            else:
-                self.logger.info("Will try again automatically.")
-                time_elapsed = time.time() - start_time
-
-        else:  # time out
-            self.logger.info("Auto try time out! try again later.")
-            return None
 
         # output_dir=os.path.join(output_dir,clean_path(key_value))
         if not os.path.exists(output_dir):
@@ -463,7 +448,6 @@ class Dcm4cheUtils:
 
         # retrieve
         self.logger.info("retrieving...")
-        # getscu --bind DEFAULT --connect CFMM-Public@dicom.cfmm.robarts.ca:11112 --tls-aes --user YOUR_UWO_USERNAME --user-pass YOUR_PASSWORD -m StudyInstanceUID=1.3.12.2.1107.5.2.34.18932.30000017052914152689000000013
         cmd = (
             self._getscu_str
             + f""" -m StudyInstanceUID={StudyInstanceUID} """
@@ -478,17 +462,13 @@ class Dcm4cheUtils:
 
         return output_sub_dir
 
-    def _retrieve_by_key_useless(
-        self, matching_key, output_dir, downloaded_uids_filename="", timeout_sec=1800
-    ):
+    def _retrieve_by_key_useless(self, matching_key, output_dir, downloaded_uids_filename=""):
         """
-        retrive dicom file by key. If PACS not ready for retrieving(e.g. console still sending data to PACS), it will keep checking until time out (30 mins)
+        Retrieve DICOM files by matching key.
 
         input:
-            key_name: specify matching key, for instance StudyInstanceUID
-            key_value: matching key's value, for instance, 1.2.3.4.5.6.....
+            matching_key: matching key dictionary, for instance {"StudyInstanceUID": "1.2.3.4.5.6....."}
             output_dir: save retrieved dicom files to
-            timeout_sec: keep checking if ready_for_retrieve before timeout
             downloaded_uids_filename: file record downloaded StudyInstanceUIDs
 
         output: (output_sub_dirs,StudyInstanceUID_list)
@@ -499,21 +479,7 @@ class Dcm4cheUtils:
             Dicom files retrieved to output_dir
         """
 
-        self.logger.info("checking if PACS ready for retrieving...")
-
-        # check PACS server data completeness
-        start_time = time.time()
-        time_elapsed = 0
-        while time_elapsed < timeout_sec:
-            if self._ready_for_retrieve(matching_key):
-                break
-            else:
-                self.logger.info("Will try again automatically.")
-                time_elapsed = time.time() - start_time
-
-        else:  # time out
-            self.logger.info("Auto try time out! try again later.")
-            return None
+        self.logger.info("retrieving...")
 
         # output_dir=os.path.join(output_dir,clean_path(key_value))
         if not os.path.exists(output_dir):
