@@ -52,7 +52,7 @@ Download a tarballed DICOM dataset from the CFMM DICOM server
 #### Option B:
 2. **Install cfmm2tar globally:**
    ```bash
-   pixi global install cfmm2tar -c khanlab -c conda-forge
+   pixi global install cfmm2tar -c khanlab
    ```
 
 **Usage:**
