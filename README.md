@@ -131,6 +131,38 @@ This creates a TSV file at `output_dir/study_metadata.tsv` with columns:
 
 Note: When downloading studies (without `-m`), metadata is automatically saved to `study_metadata.tsv` in the output directory.
 
+### Query Additional DICOM Tags
+
+You can include additional DICOM tags in the metadata TSV using the `--metadata-tags` option. This is useful for downstream filtering, remapping, or analysis based on custom metadata fields:
+
+```bash
+# Include PatientBirthDate in metadata
+cfmm2tar -m --metadata-tags 00100030:PatientBirthDate -d '20240101' output_dir
+
+# Include multiple additional tags
+cfmm2tar -m \
+  --metadata-tags 00100030:PatientBirthDate \
+  --metadata-tags 00100040:PatientSex \
+  -p 'Khan^NeuroAnalytics' -d '20240101' output_dir
+
+# Works with download mode too
+cfmm2tar --metadata-tags 00100030:PatientBirthDate -d '20240101' output_dir
+```
+
+The format is `TAG:NAME` where:
+- `TAG` is the DICOM tag in hexadecimal format (e.g., `00100030`)
+- `NAME` is the column name you want in the TSV (e.g., `PatientBirthDate`)
+
+Common DICOM tags you might want to include:
+- `00100030:PatientBirthDate` - Patient's birth date
+- `00100040:PatientSex` - Patient's sex (M/F/O)
+- `00101010:PatientAge` - Patient's age at time of study
+- `00080050:AccessionNumber` - Accession number
+- `00200010:StudyID` - Study ID
+- `00080090:ReferringPhysicianName` - Referring physician
+
+**Note:** The DICOM tag must exist in the PACS query response. If a tag is missing for a particular study, the column will contain an empty value.
+
 ### Download from UID List
 
 After reviewing the metadata file, you can download specific studies:
@@ -266,6 +298,27 @@ for study in studies:
     print(f"  {study['StudyDate']}: {study['StudyDescription']}")
 ```
 
+Query with additional DICOM tags:
+
+```python
+from cfmm2tar import query_metadata
+
+# Query metadata with additional DICOM tags
+studies = query_metadata(
+    study_description="Khan^NeuroAnalytics",
+    study_date="20240101",
+    additional_tags={
+        "00100030": "PatientBirthDate",
+        "00100040": "PatientSex",
+        "00101010": "PatientAge"
+    }
+)
+
+# Access additional fields
+for study in studies:
+    print(f"{study['PatientName']}: Age {study['PatientAge']}, Sex {study['PatientSex']}")
+```
+
 With pandas DataFrame:
 
 ```python
@@ -311,6 +364,25 @@ download_studies(
     output_dir="/path/to/output",
     study_instance_uid="1.2.840.113619.2.55.3.1234567890.123"
 )
+```
+
+Download with additional DICOM tags in metadata:
+
+```python
+from cfmm2tar import download_studies
+
+# Download studies and include additional tags in metadata TSV
+output_dir = download_studies(
+    output_dir="/path/to/output",
+    study_description="Khan^NeuroAnalytics",
+    study_date="20240101",
+    additional_tags={
+        "00100030": "PatientBirthDate",
+        "00100040": "PatientSex"
+    }
+)
+
+# The metadata TSV will include PatientBirthDate and PatientSex columns
 ```
 
 ### Download from Metadata

@@ -638,3 +638,210 @@ class TestDcm4cheUtilsUnit:
             assert rows[2]["StudyInstanceUID"] == "3.3.3.3.3"
             assert rows[2]["PatientName"] == "Patient^Three"
             assert rows[2]["PatientID"] == "ID003"
+
+    def test_additional_tags_single_tag(self):
+        """Test querying metadata with a single additional DICOM tag."""
+        import xml.etree.ElementTree as ET
+        from unittest.mock import patch
+
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+
+        # Mock XML response with default tags and PatientBirthDate (00100030)
+        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<NativeDicomModel xml:space="preserve">
+  <DicomAttribute tag="0020000D" vr="UI">
+    <Value number="1">1.2.3.4.5.6.7.8.9</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100010" vr="PN">
+    <Value number="1">Test^Patient</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100020" vr="LO">
+    <Value number="1">TEST001</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00080020" vr="DA">
+    <Value number="1">20240101</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00081030" vr="LO">
+    <Value number="1">Khan^TestProject</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100030" vr="DA">
+    <Value number="1">19900515</Value>
+  </DicomAttribute>
+</NativeDicomModel>
+"""
+        mock_root = ET.fromstring(mock_xml)
+
+        # Query with additional tag
+        additional_tags = {"00100030": "PatientBirthDate"}
+        with patch.object(
+            dcm4che_utils, "_execute_findscu_with_xml_output_per_study", return_value=[mock_root]
+        ):
+            result = dcm4che_utils.get_study_metadata_by_matching_key(
+                "-m StudyDate='*'", additional_tags
+            )
+            assert len(result) == 1
+            study = result[0]
+            # Check default fields
+            assert study["StudyInstanceUID"] == "1.2.3.4.5.6.7.8.9"
+            assert study["PatientName"] == "Test^Patient"
+            assert study["PatientID"] == "TEST001"
+            assert study["StudyDate"] == "20240101"
+            assert study["StudyDescription"] == "Khan^TestProject"
+            # Check additional field
+            assert study["PatientBirthDate"] == "19900515"
+
+    def test_additional_tags_multiple_tags(self):
+        """Test querying metadata with multiple additional DICOM tags."""
+        import xml.etree.ElementTree as ET
+        from unittest.mock import patch
+
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+
+        # Mock XML response with default tags plus PatientBirthDate and PatientSex
+        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<NativeDicomModel xml:space="preserve">
+  <DicomAttribute tag="0020000D" vr="UI">
+    <Value number="1">1.2.3.4.5.6.7.8.9</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100010" vr="PN">
+    <Value number="1">Test^Patient</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100020" vr="LO">
+    <Value number="1">TEST001</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00080020" vr="DA">
+    <Value number="1">20240101</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00081030" vr="LO">
+    <Value number="1">Khan^TestProject</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100030" vr="DA">
+    <Value number="1">19900515</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100040" vr="CS">
+    <Value number="1">M</Value>
+  </DicomAttribute>
+</NativeDicomModel>
+"""
+        mock_root = ET.fromstring(mock_xml)
+
+        # Query with multiple additional tags
+        additional_tags = {"00100030": "PatientBirthDate", "00100040": "PatientSex"}
+        with patch.object(
+            dcm4che_utils, "_execute_findscu_with_xml_output_per_study", return_value=[mock_root]
+        ):
+            result = dcm4che_utils.get_study_metadata_by_matching_key(
+                "-m StudyDate='*'", additional_tags
+            )
+            assert len(result) == 1
+            study = result[0]
+            # Check default fields
+            assert study["StudyInstanceUID"] == "1.2.3.4.5.6.7.8.9"
+            assert study["PatientName"] == "Test^Patient"
+            # Check additional fields
+            assert study["PatientBirthDate"] == "19900515"
+            assert study["PatientSex"] == "M"
+
+    def test_additional_tags_missing_tag(self):
+        """Test that missing additional tags are filled with empty strings."""
+        import xml.etree.ElementTree as ET
+        from unittest.mock import patch
+
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+
+        # Mock XML response without the additional tag PatientBirthDate
+        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<NativeDicomModel xml:space="preserve">
+  <DicomAttribute tag="0020000D" vr="UI">
+    <Value number="1">1.2.3.4.5.6.7.8.9</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100010" vr="PN">
+    <Value number="1">Test^Patient</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100020" vr="LO">
+    <Value number="1">TEST001</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00080020" vr="DA">
+    <Value number="1">20240101</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00081030" vr="LO">
+    <Value number="1">Khan^TestProject</Value>
+  </DicomAttribute>
+</NativeDicomModel>
+"""
+        mock_root = ET.fromstring(mock_xml)
+
+        # Query with additional tag that's not in the XML
+        additional_tags = {"00100030": "PatientBirthDate"}
+        with patch.object(
+            dcm4che_utils, "_execute_findscu_with_xml_output_per_study", return_value=[mock_root]
+        ):
+            result = dcm4che_utils.get_study_metadata_by_matching_key(
+                "-m StudyDate='*'", additional_tags
+            )
+            assert len(result) == 1
+            study = result[0]
+            # Check that the missing additional field is set to empty string
+            assert "PatientBirthDate" in study
+            assert study["PatientBirthDate"] == ""
+
+    def test_additional_tags_case_normalization(self):
+        """Test that additional tags are normalized to uppercase."""
+        import xml.etree.ElementTree as ET
+        from unittest.mock import patch
+
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+
+        # Mock XML response with PatientBirthDate
+        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<NativeDicomModel xml:space="preserve">
+  <DicomAttribute tag="0020000D" vr="UI">
+    <Value number="1">1.2.3.4.5.6.7.8.9</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100010" vr="PN">
+    <Value number="1">Test^Patient</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100020" vr="LO">
+    <Value number="1">TEST001</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00080020" vr="DA">
+    <Value number="1">20240101</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00081030" vr="LO">
+    <Value number="1">Khan^TestProject</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100030" vr="DA">
+    <Value number="1">19900515</Value>
+  </DicomAttribute>
+</NativeDicomModel>
+"""
+        mock_root = ET.fromstring(mock_xml)
+
+        # Query with lowercase and mixed-case tags - they should be normalized
+        additional_tags = {"0010 0030": "PatientBirthDate"}  # With spaces
+        with patch.object(
+            dcm4che_utils, "_execute_findscu_with_xml_output_per_study", return_value=[mock_root]
+        ):
+            result = dcm4che_utils.get_study_metadata_by_matching_key(
+                "-m StudyDate='*'", additional_tags
+            )
+            assert len(result) == 1
+            study = result[0]
+            # Check that the additional field was extracted correctly
+            assert study["PatientBirthDate"] == "19900515"

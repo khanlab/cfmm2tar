@@ -322,30 +322,48 @@ class Dcm4cheUtils:
 
         return StudyInstanceUID_list
 
-    def get_study_metadata_by_matching_key(self, matching_key):
+    def get_study_metadata_by_matching_key(self, matching_key, additional_tags=None):
         """
         Get study metadata (UIDs and other study info) by matching key
 
         input:
             matching_key:
               example: -m StudyDescription='Khan*' -m StudyDate='20171116'
+            additional_tags: Optional dict of additional DICOM tags to query
+              example: {"00100030": "PatientBirthDate", "00100040": "PatientSex"}
         output:
             list of dicts, each containing:
                 [{'StudyInstanceUID': '...',
                   'PatientName': '...',
                   'StudyDate': '...',
                   'StudyDescription': '...',
-                  'PatientID': '...'},
+                  'PatientID': '...',
+                  'PatientBirthDate': '...',  # if additional_tags provided
+                  ...},
                  ...]
         """
+        # Default tags and their field names
+        default_tag_map = {
+            "0020000D": "StudyInstanceUID",
+            "00100010": "PatientName",
+            "00100020": "PatientID",
+            "00080020": "StudyDate",
+            "00081030": "StudyDescription",
+        }
+
+        # Combine default and additional tags
+        tag_to_field_map = default_tag_map.copy()
+        if additional_tags:
+            # Normalize additional tags to uppercase without spaces
+            normalized_additional = {
+                tag.upper().replace(" ", ""): name for tag, name in additional_tags.items()
+            }
+            tag_to_field_map.update(normalized_additional)
+
+        # Build list of return tags (can be tag names or tag numbers)
+        return_tags = list(tag_to_field_map.keys())
+
         # Execute findscu with XML output to file - get one root per study
-        return_tags = [
-            "StudyInstanceUID",
-            "PatientName",
-            "StudyDate",
-            "StudyDescription",
-            "PatientID",
-        ]
         roots = self._execute_findscu_with_xml_output_per_study(matching_key, return_tags)
 
         # Parse each study's XML individually
@@ -362,24 +380,17 @@ class Dcm4cheUtils:
                     if value_elem is not None and value_elem.text:
                         value = value_elem.text.strip()
 
-                        # Map DICOM tags to field names
-                        if tag == "0020000D":  # StudyInstanceUID
-                            study["StudyInstanceUID"] = value
-                        elif tag == "00100010":  # PatientName
-                            study["PatientName"] = value
-                        elif tag == "00100020":  # PatientID
-                            study["PatientID"] = value
-                        elif tag == "00080020":  # StudyDate
-                            study["StudyDate"] = value
-                        elif tag == "00081030":  # StudyDescription
-                            study["StudyDescription"] = value
+                        # Map DICOM tags to field names using our mapping
+                        if tag in tag_to_field_map:
+                            field_name = tag_to_field_map[tag]
+                            study[field_name] = value
 
                 # Only add study if it has a StudyInstanceUID
                 if study.get("StudyInstanceUID"):
                     # Fill in missing fields with empty strings
-                    for field in ["PatientName", "PatientID", "StudyDate", "StudyDescription"]:
-                        if field not in study:
-                            study[field] = ""
+                    for field_name in tag_to_field_map.values():
+                        if field_name not in study:
+                            study[field_name] = ""
                     studies.append(study)
 
             except Exception as e:

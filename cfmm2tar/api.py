@@ -88,6 +88,7 @@ def query_metadata(
     dcm4che_options: str = "",
     force_refresh_trust_store: bool = False,
     return_type: str = "list",
+    additional_tags: dict[str, str] | None = None,
 ) -> list[dict[str, Any]] | Any:
     """
     Query study metadata from the DICOM server without downloading files.
@@ -114,6 +115,10 @@ def query_metadata(
         force_refresh_trust_store: Force refresh the cached JKS trust store (default: False)
         return_type: Return type - either "list" for list of dicts or "dataframe" for pandas DataFrame
                     (default: "list")
+        additional_tags: Optional dict of additional DICOM tags to include in metadata.
+                        Dict maps DICOM tag (hex string) to field name.
+                        Example: {"00100030": "PatientBirthDate", "00100040": "PatientSex"}
+                        (default: None)
 
     Returns:
         If return_type="list": List of dictionaries, each containing:
@@ -122,6 +127,7 @@ def query_metadata(
             - PatientID: Patient ID
             - StudyDate: Date of the study (YYYYMMDD format)
             - StudyDescription: Study description (typically Principal^Project)
+            - Additional fields if additional_tags specified
 
         If return_type="dataframe": pandas DataFrame with the same columns
             (requires pandas to be installed)
@@ -155,6 +161,18 @@ def query_metadata(
         ...     return_type="dataframe"
         ... )
         >>> print(df.head())
+
+        Querying with additional DICOM tags:
+        >>> studies = query_metadata(
+        ...     study_description="Khan^NeuroAnalytics",
+        ...     study_date="20240101",
+        ...     additional_tags={
+        ...         "00100030": "PatientBirthDate",
+        ...         "00100040": "PatientSex",
+        ...         "00101010": "PatientAge"
+        ...     }
+        ... )
+        >>> print(studies[0]["PatientBirthDate"])
     """
     # Get credentials
     username, password = _get_credentials(username, password, credentials_file)
@@ -185,8 +203,10 @@ def query_metadata(
     # Build matching key
     matching_key = f"-m StudyDescription='{study_description}' -m StudyDate='{study_date}' -m PatientName='{patient_name}'"
 
-    # Get study metadata
-    studies = cfmm_dcm4che_utils.get_study_metadata_by_matching_key(matching_key)
+    # Get study metadata with optional additional tags
+    studies = cfmm_dcm4che_utils.get_study_metadata_by_matching_key(
+        matching_key, additional_tags=additional_tags
+    )
 
     # Return based on requested type
     if return_type == "dataframe":
@@ -210,6 +230,7 @@ def download_studies(
     force_refresh_trust_store: bool = False,
     keep_sorted_dicom: bool = False,
     skip_derived: bool = False,
+    additional_tags: dict[str, str] | None = None,
 ) -> str:
     """
     Download DICOM studies from the server and create tar archives.
@@ -240,6 +261,10 @@ def download_studies(
         force_refresh_trust_store: Force refresh the cached JKS trust store (default: False)
         keep_sorted_dicom: Keep the sorted DICOM files after creating tar (default: False)
         skip_derived: Skip DICOM files with ImageType containing DERIVED (default: False)
+        additional_tags: Optional dict of additional DICOM tags to include in metadata.
+                        Dict maps DICOM tag (hex string) to field name.
+                        Example: {"00100030": "PatientBirthDate", "00100040": "PatientSex"}
+                        (default: None)
 
     Returns:
         Path to the output directory containing the downloaded tar files
@@ -279,6 +304,17 @@ def download_studies(
         ...     study_instance_uid=["1.2.840.113619.2.55.3.1234567890.123",
         ...                          "1.2.840.113619.2.55.3.9876543210.456"]
         ... )
+
+        Download with additional DICOM tags in metadata:
+        >>> download_studies(
+        ...     output_dir="/path/to/output",
+        ...     study_description="Khan^NeuroAnalytics",
+        ...     study_date="20240101",
+        ...     additional_tags={
+        ...         "00100030": "PatientBirthDate",
+        ...         "00100040": "PatientSex"
+        ...     }
+        ... )
     """
     # Get credentials
     username, password = _get_credentials(username, password, credentials_file)
@@ -315,6 +351,7 @@ def download_studies(
                 metadata_tsv_filename=metadata_tsv_filename,
                 force_refresh_trust_store=force_refresh_trust_store,
                 skip_derived=skip_derived,
+                additional_tags=additional_tags,
             )
     else:
         # Single UID or wildcard
@@ -334,6 +371,7 @@ def download_studies(
             metadata_tsv_filename=metadata_tsv_filename,
             force_refresh_trust_store=force_refresh_trust_store,
             skip_derived=skip_derived,
+            additional_tags=additional_tags,
         )
 
     # Clean up temp directory if empty
@@ -358,6 +396,7 @@ def download_studies_from_metadata(
     force_refresh_trust_store: bool = False,
     keep_sorted_dicom: bool = False,
     skip_derived: bool = False,
+    additional_tags: dict[str, str] | None = None,
 ) -> str:
     """
     Download DICOM studies using UIDs from metadata.
@@ -385,6 +424,10 @@ def download_studies_from_metadata(
         force_refresh_trust_store: Force refresh the cached JKS trust store (default: False)
         keep_sorted_dicom: Keep the sorted DICOM files after creating tar (default: False)
         skip_derived: Skip DICOM files with ImageType containing DERIVED (default: False)
+        additional_tags: Optional dict of additional DICOM tags to include in metadata.
+                        Dict maps DICOM tag (hex string) to field name.
+                        Example: {"00100030": "PatientBirthDate", "00100040": "PatientSex"}
+                        (default: None)
 
     Returns:
         Path to the output directory containing the downloaded tar files
@@ -428,6 +471,13 @@ def download_studies_from_metadata(
         >>> download_studies_from_metadata(
         ...     output_dir="/path/to/output",
         ...     metadata=studies
+        ... )
+
+        Download with additional DICOM tags:
+        >>> download_studies_from_metadata(
+        ...     output_dir="/path/to/output",
+        ...     metadata="study_metadata.tsv",
+        ...     additional_tags={"00100030": "PatientBirthDate"}
         ... )
     """
     # Get credentials
@@ -519,6 +569,7 @@ def download_studies_from_metadata(
             metadata_tsv_filename=metadata_tsv_filename,
             force_refresh_trust_store=force_refresh_trust_store,
             skip_derived=skip_derived,
+            additional_tags=additional_tags,
         )
 
     # Clean up temp directory if empty
