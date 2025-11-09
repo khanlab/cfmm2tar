@@ -298,6 +298,27 @@ for study in studies:
     print(f"  {study['StudyDate']}: {study['StudyDescription']}")
 ```
 
+Query with additional DICOM tags:
+
+```python
+from cfmm2tar import query_metadata
+
+# Query metadata with additional DICOM tags
+studies = query_metadata(
+    study_description="Khan^NeuroAnalytics",
+    study_date="20240101",
+    additional_tags={
+        "00100030": "PatientBirthDate",
+        "00100040": "PatientSex",
+        "00101010": "PatientAge"
+    }
+)
+
+# Access additional fields
+for study in studies:
+    print(f"{study['PatientName']}: Age {study['PatientAge']}, Sex {study['PatientSex']}")
+```
+
 With pandas DataFrame:
 
 ```python
@@ -343,6 +364,25 @@ download_studies(
     output_dir="/path/to/output",
     study_instance_uid="1.2.840.113619.2.55.3.1234567890.123"
 )
+```
+
+Download with additional DICOM tags in metadata:
+
+```python
+from cfmm2tar import download_studies
+
+# Download studies and include additional tags in metadata TSV
+output_dir = download_studies(
+    output_dir="/path/to/output",
+    study_description="Khan^NeuroAnalytics",
+    study_date="20240101",
+    additional_tags={
+        "00100030": "PatientBirthDate",
+        "00100040": "PatientSex"
+    }
+)
+
+# The metadata TSV will include PatientBirthDate and PatientSex columns
 ```
 
 ### Download from Metadata
