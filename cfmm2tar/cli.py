@@ -29,6 +29,38 @@ def read_credentials(credentials_file):
     return None, None
 
 
+def parse_metadata_tags(metadata_tags_list):
+    """
+    Parse metadata tags from CLI arguments.
+
+    Args:
+        metadata_tags_list: List of strings in format "TAG:NAME" (e.g., ["00100030:PatientBirthDate"])
+
+    Returns:
+        dict: Dictionary mapping DICOM tags to field names (e.g., {"00100030": "PatientBirthDate"})
+    """
+    if not metadata_tags_list:
+        return {}
+
+    additional_tags = {}
+    for tag_spec in metadata_tags_list:
+        if ":" not in tag_spec:
+            print(f"Warning: Invalid tag format '{tag_spec}'. Expected TAG:NAME format. Skipping.", file=sys.stderr)
+            continue
+
+        tag, name = tag_spec.split(":", 1)
+        tag = tag.strip().upper().replace(" ", "")
+        name = name.strip()
+
+        if not tag or not name:
+            print(f"Warning: Invalid tag format '{tag_spec}'. Both tag and name must be non-empty. Skipping.", file=sys.stderr)
+            continue
+
+        additional_tags[tag] = name
+
+    return additional_tags
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -121,6 +153,13 @@ Examples:
         action="store_true",
         help="Skip DICOM files with ImageType containing DERIVED (e.g., reformats, derived images)",
     )
+    parser.add_argument(
+        "--metadata-tags",
+        dest="metadata_tags",
+        action="append",
+        default=None,
+        help="Additional DICOM tags to include in metadata TSV. Format: TAG:NAME (e.g., 00100030:PatientBirthDate). Can be specified multiple times.",
+    )
 
     # Search options
     parser.add_argument(
@@ -161,6 +200,9 @@ Examples:
 
     args = parser.parse_args()
 
+    # Parse additional metadata tags
+    additional_tags = parse_metadata_tags(args.metadata_tags)
+
     # Setup output directory
     output_dir = args.output_dir
     os.makedirs(output_dir, exist_ok=True)
@@ -194,8 +236,10 @@ Examples:
         print(f"  Principal^Project: {args.study_search}")
         print(f"  Date: {args.date_search}")
         print(f"  PatientName: {args.name_search}")
+        if additional_tags:
+            print(f"  Additional tags: {', '.join(f'{tag}:{name}' for tag, name in additional_tags.items())}")
 
-        studies = cfmm_dcm4che_utils.get_study_metadata_by_matching_key(matching_key)
+        studies = cfmm_dcm4che_utils.get_study_metadata_by_matching_key(matching_key, additional_tags)
 
         if not studies:
             print("No studies found matching the search criteria.")
@@ -208,6 +252,7 @@ Examples:
         import csv
 
         with open(metadata_file, "w", newline="") as f:
+            # Build fieldnames: default fields plus any additional tags
             fieldnames = [
                 "StudyInstanceUID",
                 "PatientName",
@@ -215,6 +260,10 @@ Examples:
                 "StudyDate",
                 "StudyDescription",
             ]
+            # Add additional tag field names in consistent order
+            if additional_tags:
+                fieldnames.extend(sorted(additional_tags.values()))
+
             writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t")
             writer.writeheader()
             for study in studies:
@@ -307,6 +356,7 @@ Examples:
                     metadata_tsv_filename=metadata_tsv_filename,
                     force_refresh_trust_store=args.refresh_trust_store,
                     skip_derived=args.skip_derived,
+                    additional_tags=additional_tags,
                 )
         else:
             # Normal mode - use search criteria (no specific UIDs provided)
@@ -326,6 +376,7 @@ Examples:
                 metadata_tsv_filename=metadata_tsv_filename,
                 force_refresh_trust_store=args.refresh_trust_store,
                 skip_derived=args.skip_derived,
+                additional_tags=additional_tags,
             )
 
         # Clean up temp directory if empty

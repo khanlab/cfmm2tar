@@ -79,6 +79,7 @@ def main(
     metadata_tsv_filename="",
     force_refresh_trust_store=False,
     skip_derived=False,
+    additional_tags=None,
 ):
     """
     main workflow: for each study: query,retrieve,tar
@@ -147,7 +148,7 @@ def main(
                         full_filename = os.path.join(root, filename)
                         try:
                             ds = pydicom.dcmread(full_filename, stop_before_pixels=True)
-                            # Extract metadata
+                            # Extract default metadata
                             study_metadata = {
                                 "StudyInstanceUID": str(
                                     ds.get("StudyInstanceUID", StudyInstanceUID)
@@ -157,6 +158,18 @@ def main(
                                 "StudyDate": str(ds.get("StudyDate", "")),
                                 "StudyDescription": str(ds.get("StudyDescription", "")),
                             }
+                            # Extract additional tags if specified
+                            if additional_tags:
+                                for tag_hex, field_name in additional_tags.items():
+                                    try:
+                                        # Convert hex tag string to tuple (e.g., "00100030" -> (0x0010, 0x0030))
+                                        tag_group = int(tag_hex[:4], 16)
+                                        tag_element = int(tag_hex[4:], 16)
+                                        tag_value = ds.get((tag_group, tag_element), "")
+                                        study_metadata[field_name] = str(tag_value)
+                                    except Exception as e:
+                                        logger.warning(f"Could not extract tag {tag_hex} ({field_name}): {e}")
+                                        study_metadata[field_name] = ""
                             break  # Found metadata, exit inner loop
                         except Exception:
                             continue  # Not a DICOM file, try next
@@ -209,14 +222,19 @@ def main(
             file_exists = os.path.exists(metadata_tsv_filename)
 
             with open(metadata_tsv_filename, "a", newline="") as f:
+                # Build fieldnames: default fields plus any additional tags plus TarFilePath
                 fieldnames = [
                     "StudyInstanceUID",
                     "PatientName",
                     "PatientID",
                     "StudyDate",
                     "StudyDescription",
-                    "TarFilePath",
                 ]
+                # Add additional tag field names in consistent order
+                if additional_tags:
+                    fieldnames.extend(sorted(additional_tags.values()))
+                fieldnames.append("TarFilePath")
+
                 writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t")
 
                 # Write header if file is new
