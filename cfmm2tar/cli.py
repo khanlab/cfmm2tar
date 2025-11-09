@@ -45,7 +45,10 @@ def parse_metadata_tags(metadata_tags_list):
     additional_tags = {}
     for tag_spec in metadata_tags_list:
         if ":" not in tag_spec:
-            print(f"Warning: Invalid tag format '{tag_spec}'. Expected TAG:NAME format. Skipping.", file=sys.stderr)
+            print(
+                f"Warning: Invalid tag format '{tag_spec}'. Expected TAG:NAME format. Skipping.",
+                file=sys.stderr,
+            )
             continue
 
         tag, name = tag_spec.split(":", 1)
@@ -53,7 +56,10 @@ def parse_metadata_tags(metadata_tags_list):
         name = name.strip()
 
         if not tag or not name:
-            print(f"Warning: Invalid tag format '{tag_spec}'. Both tag and name must be non-empty. Skipping.", file=sys.stderr)
+            print(
+                f"Warning: Invalid tag format '{tag_spec}'. Both tag and name must be non-empty. Skipping.",
+                file=sys.stderr,
+            )
             continue
 
         additional_tags[tag] = name
@@ -93,6 +99,9 @@ Examples:
 
   %(prog)s -m -p 'Khan^NeuroAnalytics' -d '20170530' output_dir
       Query and write study metadata to TSV file (no download)
+
+  %(prog)s -m --metadata-tags 00100030:PatientBirthDate -d '20170530' output_dir
+      Query metadata with additional DICOM tag (PatientBirthDate)
 
   %(prog)s --from-metadata study_metadata.tsv output_dir
       Download studies using UIDs from metadata file
@@ -237,9 +246,13 @@ Examples:
         print(f"  Date: {args.date_search}")
         print(f"  PatientName: {args.name_search}")
         if additional_tags:
-            print(f"  Additional tags: {', '.join(f'{tag}:{name}' for tag, name in additional_tags.items())}")
+            print(
+                f"  Additional tags: {', '.join(f'{tag}:{name}' for tag, name in additional_tags.items())}"
+            )
 
-        studies = cfmm_dcm4che_utils.get_study_metadata_by_matching_key(matching_key, additional_tags)
+        studies = cfmm_dcm4che_utils.get_study_metadata_by_matching_key(
+            matching_key, additional_tags
+        )
 
         if not studies:
             print("No studies found matching the search criteria.")

@@ -168,7 +168,9 @@ def main(
                                         tag_value = ds.get((tag_group, tag_element), "")
                                         study_metadata[field_name] = str(tag_value)
                                     except Exception as e:
-                                        logger.warning(f"Could not extract tag {tag_hex} ({field_name}): {e}")
+                                        logger.warning(
+                                            f"Could not extract tag {tag_hex} ({field_name}): {e}"
+                                        )
                                         study_metadata[field_name] = ""
                             break  # Found metadata, exit inner loop
                         except Exception:
