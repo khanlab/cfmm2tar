@@ -17,10 +17,6 @@ import pydicom
 
 from . import dcm4che_utils, dicom_sorter, sort_rules
 
-logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s-%(levelname)s-%(message)s", datefmt="%Y/%m/%d %I:%M:%S"
-)
-
 
 def insert_tag(dicom_dir):
     """
