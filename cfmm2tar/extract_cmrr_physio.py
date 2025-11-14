@@ -16,8 +16,6 @@ import sys
 
 import pydicom
 
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s -%(message)s")
-
 
 def extract_cmrr_physio(filename, output_path):
     """
