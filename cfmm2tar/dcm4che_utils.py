@@ -375,15 +375,46 @@ class Dcm4cheUtils:
                 # Extract values from this study's XML
                 for attr in root.findall(".//DicomAttribute"):
                     tag = attr.get("tag")
-                    value_elem = attr.find("Value")
+                    vr = attr.get("vr")
+                    value = None
 
-                    if value_elem is not None and value_elem.text:
-                        value = value_elem.text.strip()
+                    # For PersonName VR (PN), prioritize PersonName element structure
+                    if vr == "PN":
+                        person_elem = attr.find("PersonName")
+                        if person_elem is not None:
+                            alphabetic = person_elem.find("Alphabetic")
+                            if alphabetic is not None:
+                                # Extract name components in DICOM order
+                                component_names = [
+                                    "FamilyName",
+                                    "GivenName",
+                                    "MiddleName",
+                                    "NamePrefix",
+                                    "NameSuffix",
+                                ]
+                                parts = []
+                                for comp_name in component_names:
+                                    elem = alphabetic.find(comp_name)
+                                    parts.append(
+                                        elem.text if elem is not None and elem.text else ""
+                                    )
 
-                        # Map DICOM tags to field names using our mapping
-                        if tag in tag_to_field_map:
-                            field_name = tag_to_field_map[tag]
-                            study[field_name] = value
+                                # Remove trailing empty parts
+                                while parts and not parts[-1]:
+                                    parts.pop()
+
+                                value = "^".join(parts) if parts else ""
+
+                    # Fall back to Value element for other VR types or if PersonName extraction failed
+                    if not value:
+                        value_elem = attr.find("Value")
+                        if value_elem is not None and value_elem.text:
+                            value = value_elem.text.strip()
+
+                    # Map DICOM tags to field names using our mapping
+                    if value and tag in tag_to_field_map:
+                        field_name = tag_to_field_map[tag]
+                        study[field_name] = value
 
                 # Only add study if it has a StudyInstanceUID
                 if study.get("StudyInstanceUID"):
