@@ -395,7 +395,9 @@ class Dcm4cheUtils:
                                 parts = []
                                 for comp_name in component_names:
                                     elem = alphabetic.find(comp_name)
-                                    parts.append(elem.text if elem is not None and elem.text else "")
+                                    parts.append(
+                                        elem.text if elem is not None and elem.text else ""
+                                    )
 
                                 # Remove trailing empty parts
                                 while parts and not parts[-1]:

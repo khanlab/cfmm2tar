@@ -641,7 +641,7 @@ class TestDcm4cheUtilsUnit:
 
     def test_person_name_xml_format(self):
         """Test that PatientName is correctly extracted from PersonName XML elements.
-        
+
         dcm4che outputs PersonName (PN) VR types using <PersonName> elements with
         structured components instead of simple <Value> elements. This test verifies
         that both formats are handled correctly.
