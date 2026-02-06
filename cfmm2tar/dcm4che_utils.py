@@ -375,15 +375,54 @@ class Dcm4cheUtils:
                 # Extract values from this study's XML
                 for attr in root.findall(".//DicomAttribute"):
                     tag = attr.get("tag")
-                    value_elem = attr.find("Value")
+                    vr = attr.get("vr")
+                    value = None
 
+                    # Try Value element first
+                    value_elem = attr.find("Value")
                     if value_elem is not None and value_elem.text:
                         value = value_elem.text.strip()
+                    # For PersonName VR (PN), look for PersonName element
+                    elif vr == "PN":
+                        person_elem = attr.find("PersonName")
+                        if person_elem is not None:
+                            alphabetic = person_elem.find("Alphabetic")
+                            if alphabetic is not None:
+                                # Extract name components
+                                family = alphabetic.find("FamilyName")
+                                given = alphabetic.find("GivenName")
+                                middle = alphabetic.find("MiddleName")
+                                prefix = alphabetic.find("NamePrefix")
+                                suffix = alphabetic.find("NameSuffix")
 
-                        # Map DICOM tags to field names using our mapping
-                        if tag in tag_to_field_map:
-                            field_name = tag_to_field_map[tag]
-                            study[field_name] = value
+                                # Build name string in DICOM format: Family^Given^Middle^Prefix^Suffix
+                                parts = []
+                                parts.append(
+                                    family.text if family is not None and family.text else ""
+                                )
+                                parts.append(
+                                    given.text if given is not None and given.text else ""
+                                )
+                                parts.append(
+                                    middle.text if middle is not None and middle.text else ""
+                                )
+                                parts.append(
+                                    prefix.text if prefix is not None and prefix.text else ""
+                                )
+                                parts.append(
+                                    suffix.text if suffix is not None and suffix.text else ""
+                                )
+
+                                # Remove trailing empty parts
+                                while parts and not parts[-1]:
+                                    parts.pop()
+
+                                value = "^".join(parts) if parts else ""
+
+                    # Map DICOM tags to field names using our mapping
+                    if value and tag in tag_to_field_map:
+                        field_name = tag_to_field_map[tag]
+                        study[field_name] = value
 
                 # Only add study if it has a StudyInstanceUID
                 if study.get("StudyInstanceUID"):

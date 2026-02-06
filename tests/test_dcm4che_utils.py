@@ -639,6 +639,100 @@ class TestDcm4cheUtilsUnit:
             assert rows[2]["PatientName"] == "Patient^Three"
             assert rows[2]["PatientID"] == "ID003"
 
+    def test_person_name_xml_format(self):
+        """Test that PatientName is correctly extracted from PersonName XML elements.
+        
+        dcm4che outputs PersonName (PN) VR types using <PersonName> elements with
+        structured components instead of simple <Value> elements. This test verifies
+        that both formats are handled correctly.
+        """
+        import xml.etree.ElementTree as ET
+        from unittest.mock import patch
+
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+
+        # Test with PersonName element format (actual dcm4che output)
+        xml_with_person_name = """<?xml version="1.0" encoding="UTF-8"?>
+<NativeDicomModel xml:space="preserve">
+  <DicomAttribute tag="0020000D" vr="UI">
+    <Value number="1">1.2.3.4.5</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100010" vr="PN">
+    <PersonName number="1">
+      <Alphabetic>
+        <FamilyName>Doe</FamilyName>
+        <GivenName>John</GivenName>
+        <MiddleName>Q</MiddleName>
+      </Alphabetic>
+    </PersonName>
+  </DicomAttribute>
+  <DicomAttribute tag="00100020" vr="LO">
+    <Value number="1">ID12345</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00080020" vr="DA">
+    <Value number="1">20240115</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00081030" vr="LO">
+    <Value number="1">Smith^StudyA</Value>
+  </DicomAttribute>
+</NativeDicomModel>
+"""
+        # Test with simple family and given name only
+        xml_simple_name = """<?xml version="1.0" encoding="UTF-8"?>
+<NativeDicomModel xml:space="preserve">
+  <DicomAttribute tag="0020000D" vr="UI">
+    <Value number="1">2.3.4.5.6</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00100010" vr="PN">
+    <PersonName number="1">
+      <Alphabetic>
+        <FamilyName>Smith</FamilyName>
+        <GivenName>Jane</GivenName>
+      </Alphabetic>
+    </PersonName>
+  </DicomAttribute>
+  <DicomAttribute tag="00100020" vr="LO">
+    <Value number="1">ID67890</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00080020" vr="DA">
+    <Value number="1">20240116</Value>
+  </DicomAttribute>
+  <DicomAttribute tag="00081030" vr="LO">
+    <Value number="1">Jones^StudyB</Value>
+  </DicomAttribute>
+</NativeDicomModel>
+"""
+
+        mock_roots = [
+            ET.fromstring(xml_with_person_name),
+            ET.fromstring(xml_simple_name),
+        ]
+
+        with patch.object(
+            dcm4che_utils, "_execute_findscu_with_xml_output_per_study", return_value=mock_roots
+        ):
+            studies = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
+
+            assert len(studies) == 2
+
+            # Verify first study with full name components
+            assert studies[0]["StudyInstanceUID"] == "1.2.3.4.5"
+            assert studies[0]["PatientName"] == "Doe^John^Q"
+            assert studies[0]["PatientID"] == "ID12345"
+            assert studies[0]["StudyDate"] == "20240115"
+            assert studies[0]["StudyDescription"] == "Smith^StudyA"
+
+            # Verify second study with simple name
+            assert studies[1]["StudyInstanceUID"] == "2.3.4.5.6"
+            assert studies[1]["PatientName"] == "Smith^Jane"
+            assert studies[1]["PatientID"] == "ID67890"
+            assert studies[1]["StudyDate"] == "20240116"
+            assert studies[1]["StudyDescription"] == "Jones^StudyB"
+
     def test_additional_tags_single_tag(self):
         """Test querying metadata with a single additional DICOM tag."""
         import xml.etree.ElementTree as ET
