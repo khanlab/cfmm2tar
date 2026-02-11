@@ -157,6 +157,12 @@ Examples:
         help="Force refresh the cached JKS trust store used for TLS connections",
     )
     parser.add_argument(
+        "--tls-cipher",
+        dest="tls_cipher",
+        default="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+        help="TLS cipher suite for dcm4che tools (default: TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384)",
+    )
+    parser.add_argument(
         "--skip-derived",
         dest="skip_derived",
         action="store_true",
@@ -235,6 +241,7 @@ Examples:
             password,
             args.dcm4che_options,
             force_refresh_trust_store=args.refresh_trust_store,
+            tls_cipher=args.tls_cipher,
         )
 
         # Build matching key
@@ -370,6 +377,7 @@ Examples:
                     force_refresh_trust_store=args.refresh_trust_store,
                     skip_derived=args.skip_derived,
                     additional_tags=additional_tags,
+                    tls_cipher=args.tls_cipher,
                 )
         else:
             # Normal mode - use search criteria (no specific UIDs provided)
@@ -390,6 +398,7 @@ Examples:
                 force_refresh_trust_store=args.refresh_trust_store,
                 skip_derived=args.skip_derived,
                 additional_tags=additional_tags,
+                tls_cipher=args.tls_cipher,
             )
 
         # Clean up temp directory if empty
