@@ -207,7 +207,7 @@ def main(
 
             # .uid file
             # Strip .tar or .tar.gz extension to add .uid
-            if tar_full_filename.endswith('.tar.gz'):
+            if tar_full_filename.endswith(".tar.gz"):
                 uid_full_filename = tar_full_filename[:-7] + ".uid"
             else:
                 uid_full_filename = tar_full_filename[:-4] + ".uid"

@@ -317,7 +317,7 @@ def download_studies(
         ...         "00100040": "PatientSex"
         ...     }
         ... )
-        
+
         Download with gzip compression:
         >>> download_studies(
         ...     output_dir="/path/to/output",
@@ -492,7 +492,7 @@ def download_studies_from_metadata(
         ...     metadata="study_metadata.tsv",
         ...     additional_tags={"00100030": "PatientBirthDate"}
         ... )
-        
+
         Download with gzip compression:
         >>> download_studies_from_metadata(
         ...     output_dir="/path/to/output",

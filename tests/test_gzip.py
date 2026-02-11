@@ -145,7 +145,7 @@ class TestGzipCompression:
         # Should create tar file(s) with .tar extension
         assert tar_files is not None
         assert len(tar_files) >= 1
-        
+
         # Check that files have .tar extension (not .tar.gz)
         for tar_file in tar_files:
             if not tar_file.endswith(".attached.tar"):
@@ -183,7 +183,7 @@ class TestGzipCompression:
         # Should create tar file(s) with .tar.gz extension
         assert tar_files is not None
         assert len(tar_files) >= 1
-        
+
         # Check that files have .tar.gz extension
         for tar_file in tar_files:
             if not tar_file.endswith(".attached.tar.gz"):
@@ -258,15 +258,13 @@ class TestGzipCompression:
             tar_files_gz = sorter.tar(5, use_gzip=True)
 
         # Get sizes of uncompressed tar files
-        size_ungz = sum(
-            os.path.getsize(f) for f in tar_files_ungz if f.endswith(".tar")
-        )
-        
+        size_ungz = sum(os.path.getsize(f) for f in tar_files_ungz if f.endswith(".tar"))
+
         # Get sizes of compressed tar files
-        size_gz = sum(
-            os.path.getsize(f) for f in tar_files_gz if f.endswith(".tar.gz")
-        )
+        size_gz = sum(os.path.getsize(f) for f in tar_files_gz if f.endswith(".tar.gz"))
 
         # Gzipped files should be smaller
         # Note: compression ratio may vary, but gzip should provide some compression
-        assert size_gz < size_ungz, f"Gzipped tar ({size_gz} bytes) should be smaller than uncompressed tar ({size_ungz} bytes)"
+        assert size_gz < size_ungz, (
+            f"Gzipped tar ({size_gz} bytes) should be smaller than uncompressed tar ({size_ungz} bytes)"
+        )
