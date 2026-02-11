@@ -32,7 +32,7 @@ except ImportError:
         def __getattr__(self, name):
             return DummyMarker()
 
-    class pytest:
+    class MockPytest:
         mark = DummyMarker()
 
         @staticmethod
@@ -48,6 +48,8 @@ except ImportError:
                 return func
 
             return decorator
+
+    pytest = MockPytest()
 
 
 try:

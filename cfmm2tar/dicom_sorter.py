@@ -337,7 +337,8 @@ class DicomSorter:
                     tar.add(original_full_filename, arcname=arcname)
 
         # tar non-imaging:
-        attached_tar_full_filenames = []
+        # Collect all unwrapped dirs for each attached tar file
+        attached_tar_dict = defaultdict(list)
         for item in before_after_sort_rule_list:
             original_full_filename = item[0]
             relative_path_new_filename = item[1]
@@ -349,22 +350,16 @@ class DicomSorter:
                 attached_tar_ext = ".attached.tar.gz" if use_gzip else ".attached.tar"
                 attached_tar_filename = tar_filename_sep.join(dir_split[:depth]) + attached_tar_ext
                 attached_tar_full_filename = os.path.join(self.output_dir, attached_tar_filename)
-
                 tar_arcname = relative_path_new_filename + "_unwraped"
+                attached_tar_dict[attached_tar_full_filename].append((unwraped_dir, tar_arcname))
 
-                if attached_tar_full_filename not in attached_tar_full_filenames:
-                    with tarfile.open(attached_tar_full_filename, tar_mode) as tar:
-                        tar.add(unwraped_dir, arcname=tar_arcname)
-
-                    attached_tar_full_filenames.append(attached_tar_full_filename)
-
-                else:
-                    # Note: gzip mode does not support append ('a'), use 'w:gz' and re-add all
-                    # For now, we'll open with the same mode. If gzip, this will fail on append.
-                    # However, the logic should ensure each attached tar is created only once.
-                    append_mode = "a:gz" if use_gzip else "a"
-                    with tarfile.open(attached_tar_full_filename, append_mode) as tar:
-                        tar.add(unwraped_dir, arcname=tar_arcname)
+        # Write all attached tar files
+        attached_tar_full_filenames = []
+        for attached_tar_full_filename, items in attached_tar_dict.items():
+            with tarfile.open(attached_tar_full_filename, tar_mode) as tar:
+                for unwraped_dir, tar_arcname in items:
+                    tar.add(unwraped_dir, arcname=tar_arcname)
+            attached_tar_full_filenames.append(attached_tar_full_filename)
 
         return list(tar_full_filename_dict.keys()) + attached_tar_full_filenames
 
