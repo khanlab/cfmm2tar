@@ -35,6 +35,7 @@ class Dcm4cheUtils:
         other_options="",
         trust_store_cache_dir=None,
         force_refresh_trust_store=False,
+        tls_cipher="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
     ):
         self.logger = logging.getLogger(__name__)
         self.connect = connect
@@ -55,7 +56,7 @@ class Dcm4cheUtils:
 
         self._findscu_str = (
             """findscu"""
-            + " --bind  DEFAULT --tls-aes "
+            + f" --bind  DEFAULT --tls-cipher {tls_cipher} "
             + f" --connect {self.connect}"
             + " --accept-timeout 10000 "
             + f" {trust_store_option} "
@@ -66,7 +67,7 @@ class Dcm4cheUtils:
 
         self._getscu_str = (
             """getscu"""
-            + " --bind  DEFAULT --tls-aes "
+            + f" --bind  DEFAULT --tls-cipher {tls_cipher} "
             + f" --connect {self.connect} "
             + " --accept-timeout 10000 "
             + f" {trust_store_option} "
@@ -560,7 +561,7 @@ class Dcm4cheUtils:
                 os.makedirs(output_sub_dir)
 
             # retrieve
-            # getscu --bind DEFAULT --connect CFMM-Public@dicom.cfmm.robarts.ca:11112 --tls-aes --user YOUR_UWO_USERNAME --user-pass YOUR_PASSWORD -m StudyInstanceUID=1.3.12.2.1107.5.2.34.18932.30000017052914152689000000013
+            # getscu --bind DEFAULT --connect CFMM-Public@dicom.cfmm.robarts.ca:11112 --tls-cipher TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 --user YOUR_UWO_USERNAME --user-pass YOUR_PASSWORD -m StudyInstanceUID=1.3.12.2.1107.5.2.34.18932.30000017052914152689000000013
             cmd = (
                 self._getscu_str
                 + f""" -m StudyInstanceUID={StudyInstanceUID} """

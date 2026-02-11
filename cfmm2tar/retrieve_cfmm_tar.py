@@ -76,6 +76,7 @@ def main(
     force_refresh_trust_store=False,
     skip_derived=False,
     additional_tags=None,
+    tls_cipher="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
 ):
     """
     main workflow: for each study: query,retrieve,tar
@@ -90,6 +91,7 @@ def main(
         uwo_password,
         other_options,
         force_refresh_trust_store=force_refresh_trust_store,
+        tls_cipher=tls_cipher,
     )
 
     if study_instance_uid == "*":

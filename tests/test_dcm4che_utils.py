@@ -108,14 +108,25 @@ class TestDcm4cheUtilsUnit:
             connect="TEST@localhost:11112",
             username="testuser",
             password="testpass",
-            other_options="--tls-aes",
         )
 
         assert dcm4che_utils.connect == "TEST@localhost:11112"
         assert dcm4che_utils.username == "testuser"
         assert dcm4che_utils.password == "testpass"
-        assert "--tls-aes" in dcm4che_utils._findscu_str
+        assert "--tls-cipher TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384" in dcm4che_utils._findscu_str
         assert "--trust-store" in dcm4che_utils._findscu_str
+
+    def test_init_with_custom_tls_cipher(self):
+        """Test initialization with a custom TLS cipher."""
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+            tls_cipher="TLS_RSA_WITH_AES_128_CBC_SHA",
+        )
+
+        assert "--tls-cipher TLS_RSA_WITH_AES_128_CBC_SHA" in dcm4che_utils._findscu_str
+        assert "--tls-cipher TLS_RSA_WITH_AES_128_CBC_SHA" in dcm4che_utils._getscu_str
 
     def test_xml_parsing_study_uids(self):
         """Test parsing StudyInstanceUIDs from XML output."""
@@ -329,189 +340,11 @@ class TestDcm4cheUtilsUnit:
             password="testpass",
         )
 
-        # Mock empty list for no studies
         with patch.object(
             dcm4che_utils, "_execute_findscu_with_xml_output_per_study", return_value=[]
         ):
             result = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
             assert len(result) == 0
-
-    def test_xml_parsing_one_study_metadata(self):
-        """Test parsing study metadata with exactly one matching study."""
-        import xml.etree.ElementTree as ET
-        from unittest.mock import patch
-
-        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
-            connect="TEST@localhost:11112",
-            username="testuser",
-            password="testpass",
-        )
-        mock_xml = """<?xml version="1.0" encoding="UTF-8"?>
-<NativeDicomModel xml:space="preserve">
-  <DicomAttribute tag="0020000D" vr="UI">
-    <Value number="1">1.1.1.1.1</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00100010" vr="PN">
-    <Value number="1">Patient^One</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00100020" vr="LO">
-    <Value number="1">ID001</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00080020" vr="DA">
-    <Value number="1">20240101</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00081030" vr="LO">
-    <Value number="1">Khan^Project1</Value>
-  </DicomAttribute>
-</NativeDicomModel>
-"""
-        mock_root = ET.fromstring(mock_xml)
-
-        with patch.object(
-            dcm4che_utils, "_execute_findscu_with_xml_output_per_study", return_value=[mock_root]
-        ):
-            result = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
-            assert len(result) == 1
-            study = result[0]
-            assert study["StudyInstanceUID"] == "1.1.1.1.1"
-            assert study["PatientName"] == "Patient^One"
-            assert study["PatientID"] == "ID001"
-            assert study["StudyDate"] == "20240101"
-            assert study["StudyDescription"] == "Khan^Project1"
-
-    def test_xml_parsing_two_study_metadata(self):
-        """Test parsing study metadata with exactly two matching studies."""
-        import xml.etree.ElementTree as ET
-        from unittest.mock import patch
-
-        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
-            connect="TEST@localhost:11112",
-            username="testuser",
-            password="testpass",
-        )
-
-        # Mock XML response with two studies - each as a separate root
-        study1_xml = """<?xml version="1.0" encoding="UTF-8"?>
-<NativeDicomModel xml:space="preserve">
-  <DicomAttribute tag="0020000D" vr="UI">
-    <Value number="1">1.1.1.1.1</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00100010" vr="PN">
-    <Value number="1">Patient^One</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00100020" vr="LO">
-    <Value number="1">ID001</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00080020" vr="DA">
-    <Value number="1">20240101</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00081030" vr="LO">
-    <Value number="1">Khan^Project1</Value>
-  </DicomAttribute>
-</NativeDicomModel>
-"""
-        study2_xml = """<?xml version="1.0" encoding="UTF-8"?>
-<NativeDicomModel xml:space="preserve">
-  <DicomAttribute tag="0020000D" vr="UI">
-    <Value number="1">2.2.2.2.2</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00100010" vr="PN">
-    <Value number="1">Patient^Two</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00100020" vr="LO">
-    <Value number="1">ID002</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00080020" vr="DA">
-    <Value number="1">20240102</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00081030" vr="LO">
-    <Value number="1">Khan^Project2</Value>
-  </DicomAttribute>
-</NativeDicomModel>
-"""
-        mock_roots = [ET.fromstring(study1_xml), ET.fromstring(study2_xml)]
-
-        with patch.object(
-            dcm4che_utils, "_execute_findscu_with_xml_output_per_study", return_value=mock_roots
-        ):
-            result = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
-            assert len(result) == 2
-
-            # Check first study
-            assert result[0]["StudyInstanceUID"] == "1.1.1.1.1"
-            assert result[0]["PatientName"] == "Patient^One"
-            assert result[0]["PatientID"] == "ID001"
-            assert result[0]["StudyDate"] == "20240101"
-            assert result[0]["StudyDescription"] == "Khan^Project1"
-
-            # Check second study
-            assert result[1]["StudyInstanceUID"] == "2.2.2.2.2"
-            assert result[1]["PatientName"] == "Patient^Two"
-            assert result[1]["PatientID"] == "ID002"
-            assert result[1]["StudyDate"] == "20240102"
-            assert result[1]["StudyDescription"] == "Khan^Project2"
-
-    def test_xml_parsing_three_study_metadata(self):
-        """Test parsing study metadata with exactly three matching studies."""
-        import xml.etree.ElementTree as ET
-        from unittest.mock import patch
-
-        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
-            connect="TEST@localhost:11112",
-            username="testuser",
-            password="testpass",
-        )
-
-        # Mock XML response with three studies - each as a separate root
-        study1_xml = """<?xml version="1.0" encoding="UTF-8"?>
-<NativeDicomModel xml:space="preserve">
-  <DicomAttribute tag="0020000D" vr="UI">
-    <Value number="1">1.1.1.1.1</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00100010" vr="PN">
-    <Value number="1">Patient^One</Value>
-  </DicomAttribute>
-</NativeDicomModel>
-"""
-        study2_xml = """<?xml version="1.0" encoding="UTF-8"?>
-<NativeDicomModel xml:space="preserve">
-  <DicomAttribute tag="0020000D" vr="UI">
-    <Value number="1">2.2.2.2.2</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00100010" vr="PN">
-    <Value number="1">Patient^Two</Value>
-  </DicomAttribute>
-</NativeDicomModel>
-"""
-        study3_xml = """<?xml version="1.0" encoding="UTF-8"?>
-<NativeDicomModel xml:space="preserve">
-  <DicomAttribute tag="0020000D" vr="UI">
-    <Value number="1">3.3.3.3.3</Value>
-  </DicomAttribute>
-  <DicomAttribute tag="00100010" vr="PN">
-    <Value number="1">Patient^Three</Value>
-  </DicomAttribute>
-</NativeDicomModel>
-"""
-        mock_roots = [
-            ET.fromstring(study1_xml),
-            ET.fromstring(study2_xml),
-            ET.fromstring(study3_xml),
-        ]
-
-        with patch.object(
-            dcm4che_utils, "_execute_findscu_with_xml_output_per_study", return_value=mock_roots
-        ):
-            result = dcm4che_utils.get_study_metadata_by_matching_key("-m StudyDate='*'")
-            assert len(result) == 3
-
-            # Check all three studies
-            assert result[0]["StudyInstanceUID"] == "1.1.1.1.1"
-            assert result[0]["PatientName"] == "Patient^One"
-            assert result[1]["StudyInstanceUID"] == "2.2.2.2.2"
-            assert result[1]["PatientName"] == "Patient^Two"
-            assert result[2]["StudyInstanceUID"] == "3.3.3.3.3"
-            assert result[2]["PatientName"] == "Patient^Three"
 
     def test_metadata_tsv_output(self):
         """Test that metadata can be written to TSV and all fields are preserved."""

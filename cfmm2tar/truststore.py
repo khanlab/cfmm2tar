@@ -15,10 +15,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-# URL for the UWO Sectigo certificate
-SECTIGO_CERT_URL = (
-    "https://pki.uwo.ca/sectigo/certificates/SectigoRSAOrganizationValidationSecureServerCA-int.pem"
-)
+# URL for the Sectigo certificate (DER/CRT format)
+SECTIGO_CERT_URL = "http://crt.sectigo.com/SectigoRSAOrganizationValidationSecureServerCA.crt"
 
 # Default cache directory in user's home
 DEFAULT_CACHE_DIR = os.path.expanduser("~/.cfmm2tar")
@@ -86,14 +84,15 @@ def ensure_truststore(cache_dir=None, force_refresh=False):
 
     logger.info("Creating trust store...")
 
-    # Download the certificate to a temporary file
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".pem", delete=False) as cert_file:
-        cert_filename = cert_file.name
+    # Download the certificate (DER/CRT format) to a temporary file
+    with tempfile.NamedTemporaryFile(suffix=".crt", delete=False) as crt_file:
+        crt_filename = crt_file.name
+    pem_filename = crt_filename + ".pem"
 
     try:
         # Download certificate using wget
         logger.info(f"Downloading certificate from {SECTIGO_CERT_URL}")
-        download_cmd = ["wget", "-O", cert_filename, SECTIGO_CERT_URL]
+        download_cmd = ["wget", "-O", crt_filename, SECTIGO_CERT_URL]
 
         result = subprocess.run(
             download_cmd, capture_output=True, text=True, timeout=30, check=False
@@ -103,10 +102,36 @@ def ensure_truststore(cache_dir=None, force_refresh=False):
             raise RuntimeError(f"Failed to download certificate: {result.stderr or result.stdout}")
 
         # Verify the certificate file was downloaded and is not empty
-        if not os.path.exists(cert_filename) or os.path.getsize(cert_filename) == 0:
+        if not os.path.exists(crt_filename) or os.path.getsize(crt_filename) == 0:
             raise RuntimeError("Downloaded certificate file is empty or does not exist")
 
         logger.info("Certificate downloaded successfully")
+
+        # Convert DER/CRT to PEM format
+        logger.info("Converting certificate from DER to PEM format")
+        convert_cmd = [
+            "openssl",
+            "x509",
+            "-inform",
+            "DER",
+            "-in",
+            crt_filename,
+            "-outform",
+            "PEM",
+            "-out",
+            pem_filename,
+        ]
+
+        result = subprocess.run(
+            convert_cmd, capture_output=True, text=True, timeout=30, check=False
+        )
+
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"Failed to convert certificate to PEM: {result.stderr or result.stdout}"
+            )
+
+        logger.info("Certificate converted to PEM successfully")
 
         # Remove existing trust store if it exists (for refresh)
         if truststore_path.exists():
@@ -122,7 +147,7 @@ def ensure_truststore(cache_dir=None, force_refresh=False):
             "-alias",
             CERT_ALIAS,
             "-file",
-            cert_filename,
+            pem_filename,
             "-keystore",
             str(truststore_path),
             "-storepass",
@@ -145,9 +170,10 @@ def ensure_truststore(cache_dir=None, force_refresh=False):
         return truststore_path
 
     finally:
-        # Clean up temporary certificate file
-        if os.path.exists(cert_filename):
-            os.unlink(cert_filename)
+        # Clean up temporary certificate files
+        for f in (crt_filename, pem_filename):
+            if os.path.exists(f):
+                os.unlink(f)
 
 
 def get_truststore_option(cache_dir=None, force_refresh=False):
