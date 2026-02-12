@@ -25,7 +25,7 @@ jobs:
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
           VERSION="0.0.0.dev${SHORT_SHA}"
-          echo "LATEST_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
+          echo "LATEST_TAG=$VERSION" >> $GITHUB_ENV
 
       - name: Get current commit SHA
         run: |
