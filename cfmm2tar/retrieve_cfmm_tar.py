@@ -77,6 +77,7 @@ def main(
     skip_derived=False,
     additional_tags=None,
     tls_cipher="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+    use_gzip=False,
 ):
     """
     main workflow: for each study: query,retrieve,tar
@@ -194,7 +195,7 @@ def main(
             # according to CFMM's rule, folder depth is 5:
             # pi/project/study_date/patient/studyID_and_hash_studyInstanceUID
             # a list with one element, retrieved_dicom_dir contain's one study
-            tar_full_filenames = d.tar(5)
+            tar_full_filenames = d.tar(5, use_gzip=use_gzip)
 
             # if there is no dicom files in the retrieved folder, tar_full_filenames is None
             if not tar_full_filenames:
@@ -205,7 +206,11 @@ def main(
             logger.info(f"tar file created: {tar_full_filename}")
 
             # .uid file
-            uid_full_filename = tar_full_filename[:-3] + "uid"
+            # Strip .tar or .tar.gz extension to add .uid
+            if tar_full_filename.endswith(".tar.gz"):
+                uid_full_filename = tar_full_filename[:-7] + ".uid"
+            else:
+                uid_full_filename = tar_full_filename[:-4] + ".uid"
             with open(uid_full_filename, "w") as f:
                 f.write(StudyInstanceUID + "\n")
 

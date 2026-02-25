@@ -169,6 +169,12 @@ Examples:
         help="Skip DICOM files with ImageType containing DERIVED (e.g., reformats, derived images)",
     )
     parser.add_argument(
+        "--gzip",
+        dest="use_gzip",
+        action="store_true",
+        help="Create gzip-compressed tar files (.tar.gz instead of .tar)",
+    )
+    parser.add_argument(
         "--metadata-tags",
         dest="metadata_tags",
         action="append",
@@ -378,6 +384,7 @@ Examples:
                     skip_derived=args.skip_derived,
                     additional_tags=additional_tags,
                     tls_cipher=args.tls_cipher,
+                    use_gzip=args.use_gzip,
                 )
         else:
             # Normal mode - use search criteria (no specific UIDs provided)
@@ -399,6 +406,7 @@ Examples:
                 skip_derived=args.skip_derived,
                 additional_tags=additional_tags,
                 tls_cipher=args.tls_cipher,
+                use_gzip=args.use_gzip,
             )
 
         # Clean up temp directory if empty

@@ -261,7 +261,7 @@ class DicomSorter:
 
         return sorted_dirs
 
-    def tar(self, depth, tar_filename_sep="_"):
+    def tar(self, depth, tar_filename_sep="_", use_gzip=False):
         """
         extract, apply sort rule, unwrap non-imaging dicom files, and create tar files(imaging->*.tar,non-imaging->*.attached.tar)
 
@@ -272,6 +272,7 @@ class DicomSorter:
                     given depth = 4,
                     tar filename is: project_study_date_patient_name_study_id.tar
             tar_filename_sep: seprator of the tar file name elements
+            use_gzip: if True, create gzip-compressed tar files (.tar.gz)
 
         output:
             tar_full_filename_list: list of resulted tar filenames
@@ -320,12 +321,14 @@ class DicomSorter:
             # dir_split: ['PI','Project','19700101','1970_01_01_T2','1.9AC66A0D','0003','1970_01_01_T2.MR.PI_project.0003.0194.19700101.D6C44EC8.dcm']
             dir_split = relative_path_new_filename.split(os.sep)
 
-            tar_filename = tar_filename_sep.join(dir_split[:depth]) + ".tar"
+            tar_ext = ".tar.gz" if use_gzip else ".tar"
+            tar_filename = tar_filename_sep.join(dir_split[:depth]) + tar_ext
             tar_full_filename = os.path.join(self.output_dir, tar_filename)
             tar_full_filename_dict[tar_full_filename].append(item)
 
+        tar_mode = "w:gz" if use_gzip else "w"
         for tar_full_filename, items in tar_full_filename_dict.items():
-            with tarfile.open(tar_full_filename, "w") as tar:
+            with tarfile.open(tar_full_filename, tar_mode) as tar:
                 for item in items:
                     original_full_filename = item[0]
                     relative_path_new_filename = item[1]
@@ -334,7 +337,8 @@ class DicomSorter:
                     tar.add(original_full_filename, arcname=arcname)
 
         # tar non-imaging:
-        attached_tar_full_filenames = []
+        # Collect all unwrapped dirs for each attached tar file
+        attached_tar_dict = defaultdict(list)
         for item in before_after_sort_rule_list:
             original_full_filename = item[0]
             relative_path_new_filename = item[1]
@@ -343,20 +347,19 @@ class DicomSorter:
 
             if unwraped_dir:
                 dir_split = relative_path_new_filename.split(os.sep)
-                attached_tar_filename = tar_filename_sep.join(dir_split[:depth]) + ".attached.tar"
+                attached_tar_ext = ".attached.tar.gz" if use_gzip else ".attached.tar"
+                attached_tar_filename = tar_filename_sep.join(dir_split[:depth]) + attached_tar_ext
                 attached_tar_full_filename = os.path.join(self.output_dir, attached_tar_filename)
-
                 tar_arcname = relative_path_new_filename + "_unwraped"
+                attached_tar_dict[attached_tar_full_filename].append((unwraped_dir, tar_arcname))
 
-                if attached_tar_full_filename not in attached_tar_full_filenames:
-                    with tarfile.open(attached_tar_full_filename, "w") as tar:
-                        tar.add(unwraped_dir, arcname=tar_arcname)
-
-                    attached_tar_full_filenames.append(attached_tar_full_filename)
-
-                else:
-                    with tarfile.open(attached_tar_full_filename, "a") as tar:
-                        tar.add(unwraped_dir, arcname=tar_arcname)
+        # Write all attached tar files
+        attached_tar_full_filenames = []
+        for attached_tar_full_filename, items in attached_tar_dict.items():
+            with tarfile.open(attached_tar_full_filename, tar_mode) as tar:
+                for unwraped_dir, tar_arcname in items:
+                    tar.add(unwraped_dir, arcname=tar_arcname)
+            attached_tar_full_filenames.append(attached_tar_full_filename)
 
         return list(tar_full_filename_dict.keys()) + attached_tar_full_filenames
 

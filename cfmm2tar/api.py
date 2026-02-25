@@ -231,6 +231,7 @@ def download_studies(
     keep_sorted_dicom: bool = False,
     skip_derived: bool = False,
     additional_tags: dict[str, str] | None = None,
+    use_gzip: bool = False,
 ) -> str:
     """
     Download DICOM studies from the server and create tar archives.
@@ -265,6 +266,7 @@ def download_studies(
                         Dict maps DICOM tag (hex string) to field name.
                         Example: {"00100030": "PatientBirthDate", "00100040": "PatientSex"}
                         (default: None)
+        use_gzip: Create gzip-compressed tar files (.tar.gz instead of .tar) (default: False)
 
     Returns:
         Path to the output directory containing the downloaded tar files
@@ -315,6 +317,14 @@ def download_studies(
         ...         "00100040": "PatientSex"
         ...     }
         ... )
+
+        Download with gzip compression:
+        >>> download_studies(
+        ...     output_dir="/path/to/output",
+        ...     study_description="Khan^NeuroAnalytics",
+        ...     study_date="20240101",
+        ...     use_gzip=True
+        ... )
     """
     # Get credentials
     username, password = _get_credentials(username, password, credentials_file)
@@ -352,6 +362,7 @@ def download_studies(
                 force_refresh_trust_store=force_refresh_trust_store,
                 skip_derived=skip_derived,
                 additional_tags=additional_tags,
+                use_gzip=use_gzip,
             )
     else:
         # Single UID or wildcard
@@ -372,6 +383,7 @@ def download_studies(
             force_refresh_trust_store=force_refresh_trust_store,
             skip_derived=skip_derived,
             additional_tags=additional_tags,
+            use_gzip=use_gzip,
         )
 
     # Clean up temp directory if empty
@@ -397,6 +409,7 @@ def download_studies_from_metadata(
     keep_sorted_dicom: bool = False,
     skip_derived: bool = False,
     additional_tags: dict[str, str] | None = None,
+    use_gzip: bool = False,
 ) -> str:
     """
     Download DICOM studies using UIDs from metadata.
@@ -478,6 +491,13 @@ def download_studies_from_metadata(
         ...     output_dir="/path/to/output",
         ...     metadata="study_metadata.tsv",
         ...     additional_tags={"00100030": "PatientBirthDate"}
+        ... )
+
+        Download with gzip compression:
+        >>> download_studies_from_metadata(
+        ...     output_dir="/path/to/output",
+        ...     metadata="study_metadata.tsv",
+        ...     use_gzip=True
         ... )
     """
     # Get credentials
@@ -570,6 +590,7 @@ def download_studies_from_metadata(
             force_refresh_trust_store=force_refresh_trust_store,
             skip_derived=skip_derived,
             additional_tags=additional_tags,
+            use_gzip=use_gzip,
         )
 
     # Clean up temp directory if empty
