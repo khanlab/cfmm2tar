@@ -17,7 +17,7 @@ from pathlib import Path
 
 # URL for the UWO Sectigo certificate
 SECTIGO_CERT_URL = (
-    "https://pki.uwo.ca/sectigo/certificates/SectigoRSAOrganizationValidationSecureServerCA-int.pem"
+    "https://pki.uwo.ca/sectigo/certificates/USERTrustRSACertificationAuthority-root.pem"
 )
 
 # Default cache directory in user's home
