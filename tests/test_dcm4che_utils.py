@@ -772,3 +772,151 @@ class TestDcm4cheUtilsUnit:
             study = result[0]
             # Check that the additional field was extracted correctly
             assert study["PatientBirthDate"] == "19900515"
+
+    def test_is_certificate_error_detects_ssl_handshake(self):
+        """Test that _is_certificate_error detects SSLHandshakeException."""
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+        assert dcm4che_utils._is_certificate_error(
+            b"javax.net.ssl.SSLHandshakeException: PKIX path building failed"
+        )
+        assert dcm4che_utils._is_certificate_error(
+            "javax.net.ssl.SSLHandshakeException: unable to find valid certification path"
+        )
+
+    def test_is_certificate_error_detects_pkix(self):
+        """Test that _is_certificate_error detects PKIX path building failures."""
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+        assert dcm4che_utils._is_certificate_error(b"PKIX path building failed")
+        assert dcm4che_utils._is_certificate_error(b"ValidatorException: PKIX path building failed")
+        assert dcm4che_utils._is_certificate_error(b"CertPathBuilderException occurred")
+
+    def test_is_certificate_error_returns_false_for_non_cert_errors(self):
+        """Test that _is_certificate_error returns False for unrelated errors."""
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+        assert not dcm4che_utils._is_certificate_error(b"Connection refused")
+        assert not dcm4che_utils._is_certificate_error(b"Timeout exceeded")
+        assert not dcm4che_utils._is_certificate_error(b"")
+        assert not dcm4che_utils._is_certificate_error(b"Picked up _JAVA_OPTIONS: -Xmx2048m\n")
+
+    def test_refresh_trust_store_rebuilds_commands(self):
+        """Test that _refresh_trust_store rebuilds findscu/getscu strings."""
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+        original_findscu = dcm4che_utils._findscu_str
+        original_getscu = dcm4che_utils._getscu_str
+
+        with patch("cfmm2tar.dcm4che_utils.truststore.get_truststore_option") as mock_get_option:
+            mock_get_option.return_value = "--trust-store /new/path/truststore.jks"
+            dcm4che_utils._refresh_trust_store()
+            mock_get_option.assert_called_once_with(
+                cache_dir=dcm4che_utils._trust_store_cache_dir, force_refresh=True
+            )
+
+        assert "--trust-store /new/path/truststore.jks" in dcm4che_utils._findscu_str
+        assert "--trust-store /new/path/truststore.jks" in dcm4che_utils._getscu_str
+        assert dcm4che_utils._findscu_str != original_findscu
+        assert dcm4che_utils._getscu_str != original_getscu
+
+    def test_execute_findscu_retries_on_cert_error(self):
+        """Test that _execute_findscu_with_xml_output retries once on a certificate error."""
+        from unittest.mock import MagicMock
+
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+
+        cert_error_output = b"javax.net.ssl.SSLHandshakeException: PKIX path building failed"
+        call_count = 0
+
+        def mock_popen(cmd, stdout, stderr, shell):
+            nonlocal call_count
+            call_count += 1
+            mock_proc = MagicMock()
+            mock_proc.communicate.return_value = (b"", cert_error_output)
+            return mock_proc
+
+        with patch("subprocess.Popen", side_effect=mock_popen):
+            with patch.object(dcm4che_utils, "_refresh_trust_store") as mock_refresh:
+                result = dcm4che_utils._execute_findscu_with_xml_output(
+                    "-m StudyDate='*'", ["StudyInstanceUID"]
+                )
+                # Should have retried once after the cert error
+                assert call_count == 2
+                mock_refresh.assert_called_once()
+        # No XML files means None is returned
+        assert result is None
+
+    def test_retrieve_by_study_uid_retries_on_cert_error(self):
+        """Test that retrieve_by_StudyInstanceUID retries once on a certificate error."""
+        import tempfile
+
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+
+        cert_error_output = b"javax.net.ssl.SSLHandshakeException: PKIX path building failed"
+        call_count = 0
+
+        def mock_get_output(cmd):
+            nonlocal call_count
+            call_count += 1
+            return b"", cert_error_output, 1
+
+        with tempfile.TemporaryDirectory() as output_dir:
+            with patch.object(
+                dcm4che_utils, "_get_stdout_stderr_returncode", side_effect=mock_get_output
+            ):
+                with patch.object(dcm4che_utils, "_refresh_trust_store") as mock_refresh:
+                    result = dcm4che_utils.retrieve_by_StudyInstanceUID("1.2.3.4.5", output_dir)
+                    # Should have retried once after the cert error
+                    assert call_count == 2
+                    mock_refresh.assert_called_once()
+        assert result is not None
+
+    def test_no_retry_when_no_cert_error(self):
+        """Test that commands are not retried when there is no certificate error."""
+        from unittest.mock import MagicMock
+
+        dcm4che_utils = dcm4che_utils_module.Dcm4cheUtils(
+            connect="TEST@localhost:11112",
+            username="testuser",
+            password="testpass",
+        )
+
+        call_count = 0
+
+        def mock_popen(cmd, stdout, stderr, shell):
+            nonlocal call_count
+            call_count += 1
+            mock_proc = MagicMock()
+            mock_proc.communicate.return_value = (b"", b"Connection refused")
+            return mock_proc
+
+        with patch("subprocess.Popen", side_effect=mock_popen):
+            with patch.object(dcm4che_utils, "_refresh_trust_store") as mock_refresh:
+                result = dcm4che_utils._execute_findscu_with_xml_output(
+                    "-m StudyDate='*'", ["StudyInstanceUID"]
+                )
+                # Should NOT have retried since error is not a cert error
+                assert call_count == 1
+                mock_refresh.assert_not_called()
+        assert result is None

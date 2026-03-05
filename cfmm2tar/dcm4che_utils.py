@@ -27,6 +27,21 @@ class Dcm4cheUtils:
     dcm4che utils
     """
 
+    # Patterns in stderr that indicate a TLS/certificate error from dcm4che tools
+    _CERT_ERROR_PATTERNS = [
+        "SSLHandshakeException",
+        "PKIX path building failed",
+        "unable to find valid certification path",
+        "CertPathBuilderException",
+        "ValidatorException",
+        "SSLPeerUnverifiedException",
+        "certificate_unknown",
+        "SSLException",
+    ]
+
+    # Maximum number of command execution attempts (1 initial + 1 retry on cert error)
+    _MAX_RETRY_ATTEMPTS = 2
+
     def __init__(
         self,
         connect,
@@ -42,6 +57,11 @@ class Dcm4cheUtils:
         self.username = username
         self.password = password
 
+        # Store parameters needed to rebuild commands after a trust store refresh
+        self._trust_store_cache_dir = trust_store_cache_dir
+        self._tls_cipher = tls_cipher
+        self._other_options = other_options
+
         # Get trust store option (will create/cache if needed)
         try:
             trust_store_option = truststore.get_truststore_option(
@@ -54,27 +74,56 @@ class Dcm4cheUtils:
             )
             trust_store_option = ""
 
+        self._build_commands(trust_store_option)
+
+    def _build_commands(self, trust_store_option):
+        """Build findscu and getscu command strings with the given trust store option."""
         self._findscu_str = (
             """findscu"""
-            + f" --bind  DEFAULT --tls-cipher {tls_cipher} "
+            + f" --bind  DEFAULT --tls-cipher {self._tls_cipher} "
             + f" --connect {self.connect}"
             + " --accept-timeout 10000 "
             + f" {trust_store_option} "
-            + f" {other_options} "
+            + f" {self._other_options} "
             + f""" --user {shlex.quote(self.username)} """
             + f""" --user-pass {shlex.quote(self.password)} """
         )
 
         self._getscu_str = (
             """getscu"""
-            + f" --bind  DEFAULT --tls-cipher {tls_cipher} "
+            + f" --bind  DEFAULT --tls-cipher {self._tls_cipher} "
             + f" --connect {self.connect} "
             + " --accept-timeout 10000 "
             + f" {trust_store_option} "
-            + f" {other_options} "
+            + f" {self._other_options} "
             + f""" --user {shlex.quote(self.username)} """
             + f""" --user-pass {shlex.quote(self.password)} """
         )
+
+    def _is_certificate_error(self, stderr):
+        """Check whether stderr output from a dcm4che command indicates a certificate error."""
+        if isinstance(stderr, bytes):
+            stderr_str = stderr.decode("utf-8", errors="replace")
+        else:
+            stderr_str = str(stderr)
+        return any(pattern in stderr_str for pattern in self._CERT_ERROR_PATTERNS)
+
+    def _refresh_trust_store(self):
+        """Force-refresh the trust store and rebuild the findscu/getscu command strings."""
+        self.logger.warning(
+            "Certificate error detected. Auto-refreshing trust store and retrying..."
+        )
+        try:
+            trust_store_option = truststore.get_truststore_option(
+                cache_dir=self._trust_store_cache_dir, force_refresh=True
+            )
+            self.logger.info(f"Trust store refreshed. Using: {trust_store_option}")
+        except Exception as e:
+            self.logger.warning(
+                f"Failed to refresh trust store: {e}. Retrying without --trust-store option."
+            )
+            trust_store_option = ""
+        self._build_commands(trust_store_option)
 
     def _get_stdout_stderr_returncode(self, cmd):
         """
@@ -93,6 +142,9 @@ class Dcm4cheUtils:
         Without --out-cat, findscu creates one XML file per study (001.dcm, 002.dcm, etc.)
         This method reads all XML files and combines them into a single root element.
 
+        If a certificate error is detected in stderr on the first attempt, the trust store is
+        automatically refreshed and the command is retried once.
+
         Args:
             matching_key: The matching key for the query (e.g., "-m StudyDescription='Khan*'")
             return_tags: List of DICOM tags to return (e.g., ["StudyInstanceUID", "PatientName"])
@@ -100,68 +152,77 @@ class Dcm4cheUtils:
         Returns:
             ET.Element: Root element containing all combined results, or None if parsing fails
         """
-        # Create a temporary directory for XML output
-        temp_dir = tempfile.mkdtemp(prefix="cfmm2tar_xml_")
+        for attempt in range(self._MAX_RETRY_ATTEMPTS):
+            # Create a temporary directory for XML output
+            temp_dir = tempfile.mkdtemp(prefix="cfmm2tar_xml_")
 
-        try:
-            # Build the findscu command with XML output to file
-            cmd = self._findscu_str + f""" {matching_key}"""
+            try:
+                # Build the findscu command with XML output to file
+                cmd = self._findscu_str + f""" {matching_key}"""
 
-            # Add return tags
-            for tag in return_tags:
-                cmd += f" -r {tag}"
+                # Add return tags
+                for tag in return_tags:
+                    cmd += f" -r {tag}"
 
-            # Add XML output options (without --out-cat so each study gets its own file)
-            cmd += f" --xml --indent --out-dir {temp_dir}"
+                # Add XML output options (without --out-cat so each study gets its own file)
+                cmd += f" --xml --indent --out-dir {temp_dir}"
 
-            # Execute the command
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-            out, err = proc.communicate()
+                # Execute the command
+                proc = subprocess.Popen(
+                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+                )
+                out, err = proc.communicate()
 
-            # Check for errors
-            if err:
-                # Ignore the annoying Java info message
-                if (
-                    err != b"Picked up _JAVA_OPTIONS: -Xmx2048m\n"
-                    and err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n"
-                ):
-                    self.logger.error(err)
+                # Check for errors
+                if err:
+                    # Ignore the annoying Java info message
+                    if (
+                        err != b"Picked up _JAVA_OPTIONS: -Xmx2048m\n"
+                        and err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n"
+                    ):
+                        self.logger.error(err)
+                        # On the first attempt, auto-retry if a certificate error is detected
+                        if attempt == 0 and self._is_certificate_error(err):
+                            self._refresh_trust_store()
+                            continue
 
-            # Find all XML files in the temporary directory (001.dcm, 002.dcm, etc.)
-            xml_files = sorted([f for f in os.listdir(temp_dir) if f.endswith(".dcm")])
+                # Find all XML files in the temporary directory (001.dcm, 002.dcm, etc.)
+                xml_files = sorted([f for f in os.listdir(temp_dir) if f.endswith(".dcm")])
 
-            if not xml_files:
-                self.logger.warning(f"No XML output files found in: {temp_dir}")
-                return None
+                if not xml_files:
+                    self.logger.warning(f"No XML output files found in: {temp_dir}")
+                    return None
 
-            # Create a root element to combine all results
-            combined_root = ET.Element("NativeDicomModel")
-            combined_root.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+                # Create a root element to combine all results
+                combined_root = ET.Element("NativeDicomModel")
+                combined_root.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
 
-            # Parse each XML file and combine the DicomAttribute elements
-            for xml_file in xml_files:
-                xml_file_path = os.path.join(temp_dir, xml_file)
-                try:
-                    tree = ET.parse(xml_file_path)
-                    root = tree.getroot()
+                # Parse each XML file and combine the DicomAttribute elements
+                for xml_file in xml_files:
+                    xml_file_path = os.path.join(temp_dir, xml_file)
+                    try:
+                        tree = ET.parse(xml_file_path)
+                        root = tree.getroot()
 
-                    # Add all DicomAttribute elements from this file to the combined root
-                    for attr in root.findall(".//DicomAttribute"):
-                        combined_root.append(attr)
+                        # Add all DicomAttribute elements from this file to the combined root
+                        for attr in root.findall(".//DicomAttribute"):
+                            combined_root.append(attr)
 
-                except ET.ParseError as e:
-                    self.logger.error(f"Error parsing XML file {xml_file}: {e}")
-                    continue
-                except Exception as e:
-                    self.logger.error(f"Error reading XML file {xml_file}: {e}")
-                    continue
+                    except ET.ParseError as e:
+                        self.logger.error(f"Error parsing XML file {xml_file}: {e}")
+                        continue
+                    except Exception as e:
+                        self.logger.error(f"Error reading XML file {xml_file}: {e}")
+                        continue
 
-            return combined_root
+                return combined_root
 
-        finally:
-            # Clean up the temporary directory
-            if os.path.exists(temp_dir):
-                shutil.rmtree(temp_dir)
+            finally:
+                # Clean up the temporary directory
+                if os.path.exists(temp_dir):
+                    shutil.rmtree(temp_dir)
+
+        return None
 
     def _execute_findscu_with_xml_output_per_study(self, matching_key, return_tags):
         """
@@ -170,6 +231,9 @@ class Dcm4cheUtils:
         Each XML file from findscu represents one study. This method returns them as separate
         root elements to preserve study boundaries.
 
+        If a certificate error is detected in stderr on the first attempt, the trust store is
+        automatically refreshed and the command is retried once.
+
         Args:
             matching_key: The matching key for the query (e.g., "-m StudyDescription='Khan*'")
             return_tags: List of DICOM tags to return (e.g., ["StudyInstanceUID", "PatientName"])
@@ -177,62 +241,71 @@ class Dcm4cheUtils:
         Returns:
             list: List of ET.Element root elements, one per study, or empty list if no results
         """
-        # Create a temporary directory for XML output
-        temp_dir = tempfile.mkdtemp(prefix="cfmm2tar_xml_")
+        for attempt in range(self._MAX_RETRY_ATTEMPTS):
+            # Create a temporary directory for XML output
+            temp_dir = tempfile.mkdtemp(prefix="cfmm2tar_xml_")
 
-        try:
-            # Build the findscu command with XML output to file
-            cmd = self._findscu_str + f""" {matching_key}"""
+            try:
+                # Build the findscu command with XML output to file
+                cmd = self._findscu_str + f""" {matching_key}"""
 
-            # Add return tags
-            for tag in return_tags:
-                cmd += f" -r {tag}"
+                # Add return tags
+                for tag in return_tags:
+                    cmd += f" -r {tag}"
 
-            # Add XML output options (without --out-cat so each study gets its own file)
-            cmd += f" --xml --indent --out-dir {temp_dir}"
+                # Add XML output options (without --out-cat so each study gets its own file)
+                cmd += f" --xml --indent --out-dir {temp_dir}"
 
-            # Execute the command
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-            out, err = proc.communicate()
+                # Execute the command
+                proc = subprocess.Popen(
+                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+                )
+                out, err = proc.communicate()
 
-            # Check for errors
-            if err:
-                # Ignore the annoying Java info message
-                if (
-                    err != b"Picked up _JAVA_OPTIONS: -Xmx2048m\n"
-                    and err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n"
-                ):
-                    self.logger.error(err)
+                # Check for errors
+                if err:
+                    # Ignore the annoying Java info message
+                    if (
+                        err != b"Picked up _JAVA_OPTIONS: -Xmx2048m\n"
+                        and err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n"
+                    ):
+                        self.logger.error(err)
+                        # On the first attempt, auto-retry if a certificate error is detected
+                        if attempt == 0 and self._is_certificate_error(err):
+                            self._refresh_trust_store()
+                            continue
 
-            # Find all XML files in the temporary directory (001.dcm, 002.dcm, etc.)
-            xml_files = sorted([f for f in os.listdir(temp_dir) if f.endswith(".dcm")])
+                # Find all XML files in the temporary directory (001.dcm, 002.dcm, etc.)
+                xml_files = sorted([f for f in os.listdir(temp_dir) if f.endswith(".dcm")])
 
-            if not xml_files:
-                self.logger.warning(f"No XML output files found in: {temp_dir}")
-                return []
+                if not xml_files:
+                    self.logger.warning(f"No XML output files found in: {temp_dir}")
+                    return []
 
-            # Parse each XML file and return as separate roots
-            roots = []
-            for xml_file in xml_files:
-                xml_file_path = os.path.join(temp_dir, xml_file)
-                try:
-                    tree = ET.parse(xml_file_path)
-                    root = tree.getroot()
-                    roots.append(root)
+                # Parse each XML file and return as separate roots
+                roots = []
+                for xml_file in xml_files:
+                    xml_file_path = os.path.join(temp_dir, xml_file)
+                    try:
+                        tree = ET.parse(xml_file_path)
+                        root = tree.getroot()
+                        roots.append(root)
 
-                except ET.ParseError as e:
-                    self.logger.error(f"Error parsing XML file {xml_file}: {e}")
-                    continue
-                except Exception as e:
-                    self.logger.error(f"Error reading XML file {xml_file}: {e}")
-                    continue
+                    except ET.ParseError as e:
+                        self.logger.error(f"Error parsing XML file {xml_file}: {e}")
+                        continue
+                    except Exception as e:
+                        self.logger.error(f"Error reading XML file {xml_file}: {e}")
+                        continue
 
-            return roots
+                return roots
 
-        finally:
-            # Clean up the temporary directory
-            if os.path.exists(temp_dir):
-                shutil.rmtree(temp_dir)
+            finally:
+                # Clean up the temporary directory
+                if os.path.exists(temp_dir):
+                    shutil.rmtree(temp_dir)
+
+        return []
 
     def _get_NumberOfStudyRelatedInstances(self, matching_key):
         """
@@ -491,17 +564,26 @@ class Dcm4cheUtils:
 
         # retrieve
         self.logger.info("retrieving...")
-        cmd = (
-            self._getscu_str
-            + f""" -m StudyInstanceUID={StudyInstanceUID} """
-            + f" --directory {output_sub_dir}"
-        )
+        for attempt in range(self._MAX_RETRY_ATTEMPTS):
+            cmd = (
+                self._getscu_str
+                + f""" -m StudyInstanceUID={StudyInstanceUID} """
+                + f" --directory {output_sub_dir}"
+            )
 
-        out, err, return_code = self._get_stdout_stderr_returncode(cmd)
+            out, err, return_code = self._get_stdout_stderr_returncode(cmd)
 
-        if err:
-            if err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n":
-                self.logger.error(err)
+            if err:
+                if (
+                    err != b"Picked up _JAVA_OPTIONS: -Xmx2048m\n"
+                    and err != "Picked up _JAVA_OPTIONS: -Xmx2048m\n"
+                ):
+                    self.logger.error(err)
+                    # On the first attempt, auto-retry if a certificate error is detected
+                    if attempt == 0 and self._is_certificate_error(err):
+                        self._refresh_trust_store()
+                        continue
+            break
 
         return output_sub_dir
 
