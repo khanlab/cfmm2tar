@@ -42,7 +42,7 @@ def extract_cmrr_physio(filename, output_path):
     """
 
     try:
-        dataset = pydicom.read_file(filename, stop_before_pixels=True)
+        dataset = pydicom.dcmread(filename, stop_before_pixels=True)
 
         image_type = dataset.ImageType
         private_7fe1_0010_value = str(dataset[(0x7FE1, 0x0010)].value)

@@ -11,7 +11,6 @@ Date:   2018-05-22
 import logging
 import os
 import shutil
-import subprocess
 import tarfile
 import tempfile
 import uuid
@@ -19,6 +18,8 @@ import zipfile
 from collections import defaultdict
 
 import pydicom
+
+from .extract_cmrr_physio import extract_cmrr_physio
 
 
 class DicomSorter:
@@ -59,7 +60,6 @@ class DicomSorter:
         output_dir,
         extract_to_dir="",
         dicomunwrap_path="dicomunwrap",
-        simens_cmrr_mb_unwrap_path="extract_cmrr_physio.py",
         skip_derived=False,
     ):
         """
@@ -95,8 +95,6 @@ class DicomSorter:
             os.makedirs(self._unwrap_to_dir_uniq)
 
         self.dicomunwrap_path = dicomunwrap_path
-
-        self.simens_cmrr_mb_unwrap_path = simens_cmrr_mb_unwrap_path
 
     def _generate_uniq_string(self):
         """
@@ -165,6 +163,8 @@ class DicomSorter:
             if is_dicomraw_wrapped:
                 # unwrap command:
                 # ./bin/dicomunwrap --input_file=/path/to/file.dcm --output_directory=/out/dir --decompress
+                import subprocess
+
                 cmd = (
                     f"{self.dicomunwrap_path} "
                     + f"--input_file={filename} "
@@ -176,14 +176,7 @@ class DicomSorter:
                 return output_directory
 
             elif is_siemens_CMRR_MB_sequance:
-                # unwrap command:
-                # python extract_cmrr_physio.py  /path/to/file.dcm /out/dir
-                cmd = (
-                    f"{self.simens_cmrr_mb_unwrap_path} " + f"{filename} " + f"{output_directory} "
-                )
-
-                subprocess.check_call(cmd, shell=True)
-
+                extract_cmrr_physio(filename, output_directory)
                 return output_directory
 
             else:
