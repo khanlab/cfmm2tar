@@ -115,6 +115,8 @@ class TestDcm4cheUtilsUnit:
         assert dcm4che_utils.password == "testpass"
         assert "--tls-cipher TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384" in dcm4che_utils._findscu_str
         assert "--trust-store" in dcm4che_utils._findscu_str
+        assert "--store-tcs" in dcm4che_utils._getscu_str
+        assert "store-tcs.properties" in dcm4che_utils._getscu_str
 
     def test_init_with_custom_tls_cipher(self):
         """Test initialization with a custom TLS cipher."""
@@ -127,6 +129,7 @@ class TestDcm4cheUtilsUnit:
 
         assert "--tls-cipher TLS_RSA_WITH_AES_128_CBC_SHA" in dcm4che_utils._findscu_str
         assert "--tls-cipher TLS_RSA_WITH_AES_128_CBC_SHA" in dcm4che_utils._getscu_str
+        assert "--store-tcs" in dcm4che_utils._getscu_str
 
     def test_xml_parsing_study_uids(self):
         """Test parsing StudyInstanceUIDs from XML output."""

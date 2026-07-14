@@ -18,8 +18,12 @@ import subprocess
 import tempfile
 import time
 import xml.etree.ElementTree as ET
+from importlib.resources import files as _resource_files
 
 from . import truststore
+
+# Path to the store-tcs.properties file bundled with this package
+_STORE_TCS_PATH = str(_resource_files("cfmm2tar").joinpath("data/store-tcs.properties"))
 
 
 class Dcm4cheUtils:
@@ -95,6 +99,7 @@ class Dcm4cheUtils:
             + f" --connect {self.connect} "
             + " --accept-timeout 10000 "
             + f" {trust_store_option} "
+            + f" --store-tcs {shlex.quote(_STORE_TCS_PATH)} "
             + f" {self._other_options} "
             + f""" --user {shlex.quote(self.username)} """
             + f""" --user-pass {shlex.quote(self.password)} """
