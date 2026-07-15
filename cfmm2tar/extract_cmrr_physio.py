@@ -42,7 +42,7 @@ def extract_cmrr_physio(filename, output_path):
     """
 
     try:
-        dataset = pydicom.read_file(filename, stop_before_pixels=True)
+        dataset = pydicom.dcmread(filename)
 
         image_type = dataset.ImageType
         private_7fe1_0010_value = str(dataset[(0x7FE1, 0x0010)].value)
@@ -51,19 +51,18 @@ def extract_cmrr_physio(filename, output_path):
             image_type == ["ORIGINAL", "PRIMARY", "RAWDATA", "PHYSIO"]
             and private_7fe1_0010_value.strip() == "SIEMENS CSA NON-IMAGE"
         ):
-            private_7fe1_1010_value = dataset[(0x7FE1, 0x1010)].value
+            private_7fe1_1010_value = bytes(dataset[(0x7FE1, 0x1010)].value)
             np = len(private_7fe1_1010_value)
             rows = int(dataset.AcquisitionNumber)
-            columns = np / rows
-            numFiles = columns / 1024
+            columns = np // rows
+            numFiles = columns // 1024
 
             if np % rows != 0 or columns % 1024 != 0:
                 logging.error(f"Invalid image size ({columns} x{rows})!")
                 return
 
-            parts = [
-                private_7fe1_1010_value[i : i + np / numFiles] for i in range(0, np, np / numFiles)
-            ]
+            part_size = np // numFiles
+            parts = [private_7fe1_1010_value[i : i + part_size] for i in range(0, np, part_size)]
 
             endian = sys.byteorder
             for part in parts:
@@ -74,13 +73,12 @@ def extract_cmrr_physio(filename, output_path):
                     datalen = struct.unpack(">I", part[0:4])[0]
                     filenamelen = struct.unpack(">I", part[4:8])[0]
 
-                log_filename = part[8 : 8 + filenamelen]
+                log_filename = part[8 : 8 + filenamelen].decode("utf-8").rstrip("\x00")
                 log_data = part[1024 : 1024 + datalen]
 
                 # write log file
                 full_log_filename = os.path.join(output_path, log_filename)
-                # logging.info('writing {}'.format(full_log_filename))
-                with open(full_log_filename, "w") as f:
+                with open(full_log_filename, "wb") as f:
                     f.write(log_data)
 
     except Exception as e:
