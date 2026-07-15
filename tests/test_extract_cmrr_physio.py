@@ -127,7 +127,9 @@ class TestExtractCmrrPhysio:
         file_meta.MediaStorageSOPInstanceUID = generate_uid()
         file_meta.ImplementationClassUID = generate_uid()
 
-        ds = FileDataset(str(tmp_path / "imaging.dcm"), {}, file_meta=file_meta, preamble=b"\x00" * 128)
+        ds = FileDataset(
+            str(tmp_path / "imaging.dcm"), {}, file_meta=file_meta, preamble=b"\x00" * 128
+        )
         ds.ImageType = ["ORIGINAL", "PRIMARY", "M"]
         ds.AcquisitionNumber = 1
         dcm_path = str(tmp_path / "imaging.dcm")
